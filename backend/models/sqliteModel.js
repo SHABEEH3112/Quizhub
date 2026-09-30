@@ -1,4 +1,5 @@
 const crypto = require("node:crypto");
+const mongoose = require("mongoose");
 const {
   deleteDocument,
   readDocumentById,
@@ -7,6 +8,32 @@ const {
 } = require("../config/sqlite");
 
 const createId = () => crypto.randomBytes(12).toString("hex");
+
+const useMongo = () => Boolean(process.env.MONGO_URI && process.env.MONGO_URI.trim());
+
+const normalizeMongoCollectionName = (modelName) => {
+  const name = modelName.charAt(0).toLowerCase() + modelName.slice(1);
+  return name.endsWith("s") ? `${name}es` : `${name}s`;
+};
+
+const getMongoModel = (modelName) => {
+  const collectionName = normalizeMongoCollectionName(modelName);
+
+  if (mongoose.models[modelName]) {
+    return mongoose.models[modelName];
+  }
+
+  const schema = new mongoose.Schema(
+    {},
+    {
+      strict: false,
+      timestamps: true,
+      collection: collectionName,
+    }
+  );
+
+  return mongoose.model(modelName, schema);
+};
 
 const comparable = (value) => {
   if (value instanceof Date) return value.getTime();
@@ -78,6 +105,56 @@ const projectDocument = (document, selection) => {
   });
   return projected;
 };
+
+class MongoQuery {
+  constructor(Model, filter, single = false) {
+    this.Model = Model;
+    this.filter = filter || {};
+    this.single = single;
+    this.sortOrder = null;
+    this.selection = null;
+    this.populations = [];
+  }
+
+  select(selection) {
+    this.selection = selection;
+    return this;
+  }
+
+  sort(order) {
+    this.sortOrder = order;
+    return this;
+  }
+
+  populate(path, selection) {
+    this.populations.push({ path, selection });
+    return this;
+  }
+
+  async exec() {
+    const model = getMongoModel(this.Model.modelName);
+    let query = model.find(this.filter);
+
+    if (this.selection) {
+      query = query.select(this.selection);
+    }
+
+    if (this.sortOrder) {
+      query = query.sort(this.sortOrder);
+    }
+
+    for (const { path, selection } of this.populations) {
+      query = query.populate({ path, select: selection });
+    }
+
+    const documents = await query.exec();
+    return this.single ? documents || null : documents;
+  }
+
+  then(resolve, reject) {
+    return this.exec().then(resolve, reject);
+  }
+}
 
 class SQLiteQuery {
   constructor(Model, filter, single = false) {
@@ -157,20 +234,44 @@ class SQLiteModel {
   }
 
   async save() {
+    if (useMongo()) {
+      const model = getMongoModel(this.constructor.modelName);
+      const payload = { ...this };
+      const document = await model.findOneAndUpdate(
+        { _id: this._id },
+        payload,
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+      if (document) Object.assign(this, document.toObject());
+      return this;
+    }
+
     this.updatedAt = new Date();
     saveDocument(this.constructor.modelName, this);
     return this;
   }
 
   async deleteOne() {
+    if (useMongo()) {
+      const model = getMongoModel(this.constructor.modelName);
+      const document = await model.findOneAndDelete({ _id: this._id });
+      return document;
+    }
+
     return deleteDocument(this.constructor.modelName, this._id);
   }
 
   static find(filter = {}) {
+    if (useMongo()) {
+      return new MongoQuery(this, filter);
+    }
     return new SQLiteQuery(this, filter);
   }
 
   static findOne(filter = {}) {
+    if (useMongo()) {
+      return new MongoQuery(this, filter, true);
+    }
     return new SQLiteQuery(this, filter, true);
   }
 
@@ -179,6 +280,21 @@ class SQLiteModel {
   }
 
   static async findOneAndUpdate(filter, update, options = {}) {
+    if (useMongo()) {
+      const model = getMongoModel(this.modelName);
+      const result = await model.findOneAndUpdate(
+        filter || {},
+        update,
+        {
+          new: true,
+          upsert: Boolean(options.upsert),
+          setDefaultsOnInsert: true,
+          ...options,
+        }
+      );
+      return result ? result.toObject() : null;
+    }
+
     let document = await this.findOne(filter);
     if (!document && !options.upsert) return null;
     if (!document) document = new this({ ...filter, ...update });
@@ -188,11 +304,22 @@ class SQLiteModel {
   }
 
   static async findOneAndDelete(filter) {
+    if (useMongo()) {
+      const model = getMongoModel(this.modelName);
+      const document = await model.findOneAndDelete(filter || {});
+      return document ? document.toObject() : null;
+    }
+
     const document = await this.findOne(filter);
     return document ? deleteDocument(this.modelName, document._id) : null;
   }
 
   static async countDocuments(filter = {}) {
+    if (useMongo()) {
+      const model = getMongoModel(this.modelName);
+      return model.countDocuments(filter || {});
+    }
+
     return readDocuments(this.modelName)
       .filter((document) => matches(document, filter))
       .length;
