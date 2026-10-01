@@ -567,12 +567,14 @@ function App() {
         return;
       }
 
-      if (!item.correctAnswer) {
+      const correctAnswer = String(item.correctAnswer || "").trim();
+
+      if (!correctAnswer) {
         setMessage(`Question ${i + 1} ka correct answer select karein.`);
         return;
       }
 
-      if (!item.options.includes(item.correctAnswer)) {
+      if (!item.options.some((option) => option.trim() === correctAnswer)) {
         setMessage(`Question ${i + 1} ka correct answer options mein mojood nahi hai.`);
         return;
       }
@@ -647,7 +649,7 @@ function App() {
           questions: newQuizQuestions.map((item) => ({
             question: item.question.trim(),
             options: item.options.map((option) => option.trim()),
-            correctAnswer: item.correctAnswer,
+            correctAnswer: String(item.correctAnswer || "").trim(),
             marks: Math.max(1, Number(item.marks) || 1),
           })),
         }),
@@ -931,12 +933,14 @@ function App() {
         return;
       }
 
-      if (!item.correctAnswer) {
+      const correctAnswer = String(item.correctAnswer || "").trim();
+
+      if (!correctAnswer) {
         setMessage(`Question ${i + 1} ka correct answer select karein.`);
         return;
       }
 
-      if (!item.options.includes(item.correctAnswer)) {
+      if (!item.options.some((option) => option.trim() === correctAnswer)) {
         setMessage(`Question ${i + 1} ka correct answer options mein mojood nahi hai.`);
         return;
       }
@@ -1007,7 +1011,7 @@ function App() {
           questions: editQuizQuestions.map((item) => ({
             question: item.question.trim(),
             options: item.options.map((option) => option.trim()),
-            correctAnswer: item.correctAnswer,
+            correctAnswer: String(item.correctAnswer || "").trim(),
             marks: Math.max(1, Number(item.marks) || 1),
           })),
         }),

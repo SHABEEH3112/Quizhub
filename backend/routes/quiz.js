@@ -94,13 +94,15 @@ function validateQuestions(questions) {
       return `All options of Question ${i + 1} are required`;
     }
 
-    if (!question.correctAnswer) {
+    const correctAnswer = String(question.correctAnswer || "").trim();
+
+    if (!correctAnswer) {
       return `Correct answer of Question ${i + 1} is required`;
     }
 
     if (
-      !question.options.includes(
-        question.correctAnswer
+      !question.options.some(
+        (option) => String(option).trim() === correctAnswer
       )
     ) {
       return `Correct answer of Question ${i + 1} must match one of its options`;
@@ -131,7 +133,7 @@ function prepareQuestions(questions) {
       String(option).trim()
     ),
 
-    correctAnswer: question.correctAnswer,
+    correctAnswer: String(question.correctAnswer || "").trim(),
 
     marks:
       Number(question.marks) >= 1
