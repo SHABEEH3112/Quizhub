@@ -133,7 +133,9 @@ class MongoQuery {
 
   async exec() {
     const model = getMongoModel(this.Model.modelName);
-    let query = model.find(this.filter);
+    let query = this.single
+      ? model.findOne(this.filter)
+      : model.find(this.filter);
 
     if (this.selection) {
       query = query.select(this.selection);
@@ -147,8 +149,7 @@ class MongoQuery {
       query = query.populate({ path, select: selection });
     }
 
-    const documents = await query.exec();
-    return this.single ? documents || null : documents;
+    return query.exec();
   }
 
   then(resolve, reject) {
