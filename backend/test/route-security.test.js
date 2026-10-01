@@ -29,6 +29,7 @@ const Attempt = require("../models/Attempt");
 const app = express();
 app.use(express.json());
 app.use("/api/auth", require("../routes/auth"));
+app.use("/api/quizzes", require("../routes/quiz"));
 app.use("/api/attempts", require("../routes/attempt"));
 
 let server;
@@ -101,6 +102,31 @@ test("password reset token is emailed, hashed in SQLite, and not returned by the
   const updatedUser = await User.findById(user._id);
   assert.equal(await bcrypt.compare("new-password", updatedUser.password), true);
   assert.equal(updatedUser.resetPasswordTokenHash, "");
+});
+
+test("quiz creation respects manual total marks when validating passing marks", async () => {
+  const teacherToken = jwt.sign(
+    { userId: "teacher-id", role: "teacher" },
+    process.env.JWT_SECRET
+  );
+  const response = await postJson("/api/quizzes", {
+    token: teacherToken,
+    title: "Manual total marks test",
+    timeLimit: 10,
+    totalMarks: 10,
+    passingMarks: 9,
+    questions: [{
+      question: "A test question?",
+      options: ["A", "B", "C", "D"],
+      correctAnswer: "A",
+      marks: 1,
+    }],
+  });
+  const responseData = await response.json();
+
+  assert.equal(response.status, 201);
+  assert.equal(responseData.quiz.totalMarks, 10);
+  assert.equal(responseData.quiz.passingMarks, 9);
 });
 
 test("attempt submission rejects repeated answers for the same question", async () => {

@@ -298,6 +298,7 @@ router.post("/", verifyTeacher, async (req, res) => {
       description,
 
       timeLimit,
+      totalMarks,
       passingMarks,
 
       questions,
@@ -373,13 +374,14 @@ router.post("/", verifyTeacher, async (req, res) => {
 
     // ---------------------------------------------
     // TOTAL MARKS
-    // Automatically calculated
+    // Use the manual total when provided; otherwise calculate from questions.
     // ---------------------------------------------
 
-    const totalMarks =
-      calculateTotalMarks(
-        preparedQuestions
-      );
+    const requestedTotalMarks = Number(totalMarks);
+    const finalTotalMarks =
+      Number.isFinite(requestedTotalMarks) && requestedTotalMarks > 0
+        ? requestedTotalMarks
+        : calculateTotalMarks(preparedQuestions);
 
     // ---------------------------------------------
     // PASSING MARKS
@@ -396,7 +398,7 @@ router.post("/", verifyTeacher, async (req, res) => {
     }
 
     if (
-      finalPassingMarks > totalMarks
+      finalPassingMarks > finalTotalMarks
     ) {
       return res.status(400).json({
         message:
@@ -451,7 +453,7 @@ router.post("/", verifyTeacher, async (req, res) => {
       timeLimit:
         finalTimeLimit,
 
-      totalMarks,
+      totalMarks: finalTotalMarks,
 
       passingMarks:
         finalPassingMarks,
@@ -555,6 +557,7 @@ router.put(
         description,
 
         timeLimit,
+        totalMarks,
         passingMarks,
 
         questions,
@@ -651,11 +654,19 @@ router.put(
             questions
           );
 
-        // Recalculate total marks
-        quiz.totalMarks =
-          calculateTotalMarks(
-            quiz.questions
-          );
+        if (totalMarks === undefined || Number(totalMarks) === 0) {
+          quiz.totalMarks = calculateTotalMarks(quiz.questions);
+        }
+      }
+
+      if (totalMarks !== undefined && Number(totalMarks) !== 0) {
+        const value = Number(totalMarks);
+        if (!Number.isFinite(value) || value < 0) {
+          return res.status(400).json({
+            message: "Total marks must be a valid non-negative number",
+          });
+        }
+        quiz.totalMarks = value;
       }
 
       // ---------------------------------------------
