@@ -426,10 +426,15 @@ function App() {
         return;
       }
 
+      const updatedStudent = data.profile?.student || data.profile;
+      if (!updatedStudent || updatedStudent.profilePicture !== profilePicture) {
+        setMessage("Profile save hui, lekin picture confirm nahi hui. Dobara try karein.");
+        return;
+      }
+
       setProfile(data.profile);
-      const updatedStudent = data.profile?.student || data.profile || {};
       const updatedName = updatedStudent.name || displayName.trim() || user?.name || "Student";
-      const updatedPicture = updatedStudent.profilePicture || profilePicture || "";
+      const updatedPicture = updatedStudent.profilePicture || "";
       const updatedTeacherId =
         String(updatedStudent.teacherId || teacherId || "").trim();
       setDisplayName(updatedName);
