@@ -426,15 +426,30 @@ function App() {
         return;
       }
 
-      const updatedStudent = data.profile?.student || data.profile;
-      if (!updatedStudent || updatedStudent.profilePicture !== profilePicture) {
-        setMessage("Profile save hui, lekin picture confirm nahi hui. Dobara try karein.");
+      let updatedStudent = data.profile?.student || data.profile;
+      let savedPicture = updatedStudent?.profilePicture;
+
+      if (profilePicture && savedPicture !== profilePicture) {
+        const confirmationResponse = await fetch(
+          `${API}/api/profile?token=${encodeURIComponent(token)}`
+        );
+        const confirmationData = await confirmationResponse.json();
+        updatedStudent =
+          confirmationData.profile?.student || confirmationData.profile;
+        savedPicture = updatedStudent?.profilePicture;
+      }
+
+      if (
+        profilePicture &&
+        (!updatedStudent || savedPicture !== profilePicture)
+      ) {
+        setMessage("Profile save hui, lekin server par nayi picture save confirm nahi hui. Backend logs check karein aur dobara try karein.");
         return;
       }
 
       setProfile(data.profile);
       const updatedName = updatedStudent.name || displayName.trim() || user?.name || "Student";
-      const updatedPicture = updatedStudent.profilePicture || "";
+      const updatedPicture = savedPicture || "";
       const updatedTeacherId =
         String(updatedStudent.teacherId || teacherId || "").trim();
       setDisplayName(updatedName);
