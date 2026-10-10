@@ -12,6 +12,17 @@ const {
 
 const router = express.Router();
 
+const getClientUrl = () => {
+  const configuredUrl = (process.env.CLIENT_URL || "").trim();
+  if (configuredUrl) return configuredUrl;
+
+  if (process.env.VERCEL || process.env.NODE_ENV === "production") {
+    throw new Error("CLIENT_URL must be configured for production email links.");
+  }
+
+  return "http://localhost:5173";
+};
+
 // ==========================================
 // REGISTER
 // ==========================================
@@ -63,9 +74,7 @@ router.post("/register", async (req, res) => {
       .createHash("sha256")
       .update(verificationToken)
       .digest("hex");
-    const verificationUrl = new URL(
-      process.env.CLIENT_URL || "http://localhost:5173"
-    );
+    const verificationUrl = new URL(getClientUrl());
     verificationUrl.searchParams.set("verify", verificationToken);
 
     await PendingRegistration.findOneAndUpdate(
@@ -221,6 +230,7 @@ router.post("/login", async (req, res) => {
         email: user.email,
         role: user.role || "student",
         rollNumber: user.rollNumber || "",
+        teacherId: user.teacherId || "",
       },
     });
   } catch (error) {
@@ -263,9 +273,7 @@ router.post("/forgot-password", async (req, res) => {
       .createHash("sha256")
       .update(resetToken)
       .digest("hex");
-    const resetUrl = new URL(
-      process.env.CLIENT_URL || "http://localhost:5173"
-    );
+    const resetUrl = new URL(getClientUrl());
     resetUrl.searchParams.set("reset", resetToken);
 
     user.resetPasswordTokenHash = resetTokenHash;
@@ -280,13 +288,21 @@ router.post("/forgot-password", async (req, res) => {
         to: user.email,
         resetUrl: resetUrl.toString(),
       });
+
+      return res.status(202).json({
+        message: "If this email exists, a password reset link has been sent.",
+      });
     } catch (emailError) {
       console.error("PASSWORD RESET EMAIL ERROR:", emailError.name);
-    }
+      user.resetPasswordTokenHash = undefined;
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpires = undefined;
+      await user.save();
 
-    return res.status(202).json({
-      message: "If this email exists, a password reset link has been sent.",
-    });
+      return res.status(503).json({
+        message: "Password reset email send nahi hui. SMTP settings check karein.",
+      });
+    }
   } catch (error) {
     console.log("FORGOT PASSWORD ERROR:");
     console.log(error);

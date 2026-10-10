@@ -241,11 +241,12 @@ function App() {
 
           if (profileResponse.ok && profileData.profile) {
             const teacherProfile = profileData.profile;
+            const nextTeacherId = teacherProfile.teacherId || data.user?.teacherId || "";
             setProfile(teacherProfile);
             setDisplayName(teacherProfile.name || data.user.name || "");
             setProfilePicture(teacherProfile.profilePicture || "");
-            setTeacherId(teacherProfile.teacherId || "");
-            setUser((current) => current ? { ...current, ...teacherProfile } : current);
+            setTeacherId(nextTeacherId);
+            setUser((current) => current ? { ...current, ...teacherProfile, teacherId: nextTeacherId } : current);
           }
         } catch {
           // Keep teacher login available if optional profile loading fails.
@@ -429,7 +430,7 @@ function App() {
       const updatedStudent = data.profile?.student || data.profile || {};
       const updatedName = updatedStudent.name || displayName.trim() || user?.name || "Student";
       const updatedPicture = updatedStudent.profilePicture || profilePicture || "";
-      const updatedTeacherId = updatedStudent.teacherId ?? teacherId;
+      const updatedTeacherId = updatedStudent.teacherId ?? teacherId ?? "";
       setDisplayName(updatedName);
       setProfilePicture(updatedPicture);
       setTeacherId(updatedTeacherId);

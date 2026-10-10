@@ -29,6 +29,7 @@ const Attempt = require("../models/Attempt");
 const app = express();
 app.use(express.json());
 app.use("/api/auth", require("../routes/auth"));
+app.use("/api/profile", require("../routes/profile"));
 app.use("/api/quizzes", require("../routes/quiz"));
 app.use("/api/attempts", require("../routes/attempt"));
 
@@ -57,6 +58,57 @@ const postJson = (url, body) => fetch(`${baseUrl}${url}`, {
   method: "POST",
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify(body),
+});
+
+test("teacher login and profile data include persisted teacherId", async () => {
+  const teacher = await new User({
+    name: "Teacher ID User",
+    email: "teacher-id@example.test",
+    password: await bcrypt.hash("teacher-password", 10),
+    role: "teacher",
+    teacherId: "T-9001",
+  }).save();
+
+  const loginResponse = await postJson("/api/auth/login", {
+    email: teacher.email,
+    password: "teacher-password",
+  });
+  const loginData = await loginResponse.json();
+
+  assert.equal(loginResponse.status, 200);
+  assert.equal(loginData.user.teacherId, "T-9001");
+
+  const profileResponse = await fetch(`${baseUrl}/api/profile?token=${loginData.token}`);
+  const profileData = await profileResponse.json();
+
+  assert.equal(profileResponse.status, 200);
+  assert.equal(profileData.profile.teacherId, "T-9001");
+});
+
+test("forgot password fails clearly when the mail server rejects the request", async () => {
+  const user = await new User({
+    name: "Reset Failure User",
+    email: "reset-failure@example.test",
+    password: await bcrypt.hash("old-password", 10),
+    role: "student",
+  }).save();
+
+  const originalTransport = nodemailer.createTransport;
+  nodemailer.createTransport = () => ({
+    sendMail: async () => {
+      throw new Error("SMTP authentication failed");
+    },
+  });
+
+  const response = await postJson("/api/auth/forgot-password", {
+    email: user.email,
+  });
+  const responseData = await response.json();
+
+  assert.equal(response.status, 503);
+  assert.match(responseData.message, /SMTP|email service|check/i);
+
+  nodemailer.createTransport = originalTransport;
 });
 
 test("password reset token is emailed, hashed in SQLite, and not returned by the API", async () => {
