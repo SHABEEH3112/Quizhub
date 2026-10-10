@@ -430,7 +430,8 @@ function App() {
       const updatedStudent = data.profile?.student || data.profile || {};
       const updatedName = updatedStudent.name || displayName.trim() || user?.name || "Student";
       const updatedPicture = updatedStudent.profilePicture || profilePicture || "";
-      const updatedTeacherId = updatedStudent.teacherId ?? teacherId ?? "";
+      const updatedTeacherId =
+        String(updatedStudent.teacherId || teacherId || "").trim();
       setDisplayName(updatedName);
       setProfilePicture(updatedPicture);
       setTeacherId(updatedTeacherId);
@@ -2349,7 +2350,7 @@ function App() {
                 <h3 style={{ marginTop: 0 }}>Teacher Account</h3>
                 <p><strong>Name:</strong> {user?.name}</p>
                 <p><strong>Email:</strong> {user?.email}</p>
-                <p><strong>Teacher ID:</strong> {teacherId || user?.teacherId || "Not set"}</p>
+                <p><strong>Teacher ID:</strong> {teacherId || user?.teacherId || profile?.teacherId || "Not set"}</p>
                 <p><strong>Role:</strong> Teacher</p>
               </div>
 

@@ -83,6 +83,27 @@ test("teacher login and profile data include persisted teacherId", async () => {
 
   assert.equal(profileResponse.status, 200);
   assert.equal(profileData.profile.teacherId, "T-9001");
+
+  const updateResponse = await fetch(`${baseUrl}/api/profile`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      token: loginData.token,
+      teacherId: "T-9002",
+    }),
+  });
+  const updateData = await updateResponse.json();
+
+  assert.equal(updateResponse.status, 200);
+  assert.equal(updateData.profile.teacherId, "T-9002");
+
+  const refreshedProfileResponse = await fetch(
+    `${baseUrl}/api/profile?token=${loginData.token}`
+  );
+  const refreshedProfileData = await refreshedProfileResponse.json();
+
+  assert.equal(refreshedProfileResponse.status, 200);
+  assert.equal(refreshedProfileData.profile.teacherId, "T-9002");
 });
 
 test("forgot password fails clearly when the mail server rejects the request", async () => {
