@@ -132,36 +132,15 @@ function App() {
         if (!response.ok || !data.profile) return;
 
         const profileData = data.profile;
-        const nextDisplayName = profileData.name || profileData.student?.name || "Student";
-        const nextPicture = profileData.profilePicture || "";
-        const nextTeacherId = profileData.teacherId || "";
         const nextRole = profileData.role || "student";
 
-        setProfile(profileData);
-        setUser((current) => ({
-          ...(current || {}),
-          ...profileData,
-          role: nextRole,
-          teacherId: nextTeacherId,
-          name: nextDisplayName,
-        }));
-        setDisplayName(nextDisplayName);
-        setProfilePicture(nextPicture);
-        setTeacherId(nextTeacherId);
-        setClassName(profileData.className || "");
-        setSection(profileData.section || "");
-        setRollNumber(profileData.rollNumber || "");
-        setSubject(profileData.subject || "");
+        syncProfileState(profileData, profileData.name || profileData.student?.name || "Student");
 
         if (nextRole === "teacher") {
           setPage("teacherDashboard");
         } else {
           setPage("dashboard");
         }
-
-        if (nextDisplayName) localStorage.setItem("profileDisplayName", nextDisplayName);
-        if (nextPicture) localStorage.setItem("profilePicture", nextPicture);
-        if (nextTeacherId) localStorage.setItem("teacherId", nextTeacherId);
       } catch {
         // Ignore reload errors and leave the user on the login flow if needed.
       }
@@ -210,6 +189,44 @@ function App() {
   }, []);
 
   const shownName = displayName.trim() || user?.name || "Student";
+
+  const syncProfileState = (profileData, fallbackName = "Student") => {
+    const baseProfile = profileData?.student && profileData.role !== "teacher"
+      ? { ...profileData.student, ...profileData }
+      : profileData || {};
+    const nextName = baseProfile.name || fallbackName;
+    const nextPicture = baseProfile.profilePicture || "";
+    const nextTeacherId = String(baseProfile.teacherId || "").trim();
+    const nextClassName = String(baseProfile.className || "").trim();
+    const nextSection = String(baseProfile.section || "").trim();
+    const nextRollNumber = String(baseProfile.rollNumber || "").trim();
+    const nextSubject = String(baseProfile.subject || "").trim();
+
+    setProfile(baseProfile);
+    setDisplayName(nextName);
+    setProfilePicture(nextPicture);
+    setTeacherId(nextTeacherId);
+    setClassName(nextClassName);
+    setSection(nextSection);
+    setRollNumber(nextRollNumber);
+    setSubject(nextSubject);
+    setUser((current) => ({
+      ...(current || {}),
+      ...baseProfile,
+      name: nextName,
+      teacherId: nextTeacherId,
+      role: baseProfile.role || current?.role || "student",
+      rollNumber: nextRollNumber || current?.rollNumber || "",
+    }));
+
+    try {
+      localStorage.setItem("profileDisplayName", nextName);
+      if (nextPicture) localStorage.setItem("profilePicture", nextPicture);
+      else localStorage.removeItem("profilePicture");
+      if (nextTeacherId) localStorage.setItem("teacherId", nextTeacherId);
+      else localStorage.removeItem("teacherId");
+    } catch {}
+  };
 
   const handleProfilePictureChange = (e) => {
     const file = e.target.files?.[0];
@@ -295,15 +312,7 @@ function App() {
 
           if (profileResponse.ok && profileData.profile) {
             const teacherProfile = profileData.profile;
-            const nextTeacherId = teacherProfile.teacherId || data.user?.teacherId || "";
-            setProfile(teacherProfile);
-            setDisplayName(teacherProfile.name || data.user.name || "");
-            setProfilePicture(teacherProfile.profilePicture || "");
-            setTeacherId(nextTeacherId);
-            setUser((current) => current ? { ...current, ...teacherProfile, teacherId: nextTeacherId } : current);
-            localStorage.setItem("teacherId", nextTeacherId);
-            if (teacherProfile.profilePicture) localStorage.setItem("profilePicture", teacherProfile.profilePicture);
-            if (teacherProfile.name) localStorage.setItem("profileDisplayName", teacherProfile.name);
+            syncProfileState(teacherProfile, teacherProfile.name || data.user?.name || "Teacher");
           }
         } catch {
           // Keep teacher login available if optional profile loading fails.
@@ -320,19 +329,9 @@ function App() {
         const profileData = await profileResponse.json();
 
         if (profileResponse.ok && profileData.profile) {
-          setProfile(profileData.profile);
-          setClassName(profileData.profile.className || "");
-          setSection(profileData.profile.section || "");
-          setRollNumber(profileData.profile.rollNumber || "");
-          setSubject(profileData.profile.subject || "");
           const profileStudent = profileData.profile?.student || profileData.profile || {};
           const loadedName = profileStudent.name || data.user?.name || localStorage.getItem("profileDisplayName") || "Student";
-          const loadedPicture = profileStudent.profilePicture || localStorage.getItem("profilePicture") || "";
-          setDisplayName(loadedName);
-          setProfilePicture(loadedPicture);
-          setUser((current) => current ? { ...current, name: loadedName, rollNumber: profileStudent.rollNumber || current.rollNumber || "" } : current);
-          if (loadedName) localStorage.setItem("profileDisplayName", loadedName);
-          if (loadedPicture) localStorage.setItem("profilePicture", loadedPicture);
+          syncProfileState(profileData.profile, loadedName);
           setPage("dashboard");
         } else {
           setPage("profile");
@@ -424,18 +423,13 @@ function App() {
         return;
       }
 
-      setProfile(data.profile);
       const createdStudent = data.profile?.student || data.profile || {};
       const createdName = createdStudent.name || displayName.trim() || user?.name || "Student";
       const createdPicture = createdStudent.profilePicture || profilePicture || "";
-      setDisplayName(createdName);
-      setProfilePicture(createdPicture);
-      setUser((current) => current ? { ...current, name: createdName, rollNumber: createdStudent.rollNumber || rollNumber } : current);
-      try {
-        localStorage.setItem("profileDisplayName", createdName);
-        if (createdPicture) localStorage.setItem("profilePicture", createdPicture);
-        if (isTeacher && teacherId.trim()) localStorage.setItem("teacherId", teacherId.trim());
-      } catch {}
+      const createdProfile = data.profile || createdStudent;
+      syncProfileState(createdProfile, createdName);
+      if (createdPicture) localStorage.setItem("profilePicture", createdPicture);
+      if (isTeacher && teacherId.trim()) localStorage.setItem("teacherId", teacherId.trim());
       setMessage("Profile successfully create ho gaya!");
       setPage("dashboard");
     } catch {
@@ -487,34 +481,16 @@ function App() {
       }
 
       const updatedStudent = data.profile?.student || data.profile || {};
-      let savedPicture = updatedStudent.profilePicture || profilePicture || "";
-
-      if (profilePicture && !savedPicture) {
-        const confirmationResponse = await fetch(
-          `${API}/api/profile?token=${encodeURIComponent(token)}`
-        );
-        const confirmationData = await confirmationResponse.json();
-        const confirmationProfile =
-          confirmationData.profile?.student || confirmationData.profile || {};
-        savedPicture = confirmationProfile.profilePicture || profilePicture || "";
-      }
-
-      setProfile(data.profile || updatedStudent);
+      const refreshedProfile = data.profile || updatedStudent;
       const updatedName = updatedStudent.name || displayName.trim() || user?.name || "Student";
-      const updatedPicture = savedPicture || "";
-      const updatedTeacherId =
-        String(updatedStudent.teacherId || teacherId || "").trim();
-      setDisplayName(updatedName);
-      setProfilePicture(updatedPicture);
-      setTeacherId(updatedTeacherId);
-      setUser((current) => current ? { ...current, name: updatedName, teacherId: updatedTeacherId, rollNumber: updatedStudent.rollNumber || rollNumber } : current);
-      try {
-        localStorage.setItem("profileDisplayName", updatedName);
-        if (updatedPicture) localStorage.setItem("profilePicture", updatedPicture);
-        else localStorage.removeItem("profilePicture");
-        if (updatedTeacherId) localStorage.setItem("teacherId", updatedTeacherId);
-        else localStorage.removeItem("teacherId");
-      } catch {}
+      const updatedPicture = refreshedProfile.profilePicture || profilePicture || "";
+      const updatedTeacherId = String(refreshedProfile.teacherId || teacherId || "").trim();
+
+      syncProfileState(refreshedProfile, updatedName);
+      if (updatedPicture) localStorage.setItem("profilePicture", updatedPicture);
+      else localStorage.removeItem("profilePicture");
+      if (updatedTeacherId) localStorage.setItem("teacherId", updatedTeacherId);
+      else localStorage.removeItem("teacherId");
       setMessage("Profile successfully update ho gaya!");
       setPage(isTeacher ? "teacherDashboard" : "dashboard");
     } catch {
