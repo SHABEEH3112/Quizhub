@@ -135,17 +135,29 @@ function App() {
         const nextDisplayName = profileData.name || profileData.student?.name || "Student";
         const nextPicture = profileData.profilePicture || "";
         const nextTeacherId = profileData.teacherId || "";
+        const nextRole = profileData.role || "student";
 
         setProfile(profileData);
         setUser((current) => ({
           ...(current || {}),
           ...profileData,
+          role: nextRole,
           teacherId: nextTeacherId,
           name: nextDisplayName,
         }));
         setDisplayName(nextDisplayName);
         setProfilePicture(nextPicture);
         setTeacherId(nextTeacherId);
+        setClassName(profileData.className || "");
+        setSection(profileData.section || "");
+        setRollNumber(profileData.rollNumber || "");
+        setSubject(profileData.subject || "");
+
+        if (nextRole === "teacher") {
+          setPage("teacherDashboard");
+        } else {
+          setPage("dashboard");
+        }
 
         if (nextDisplayName) localStorage.setItem("profileDisplayName", nextDisplayName);
         if (nextPicture) localStorage.setItem("profilePicture", nextPicture);
