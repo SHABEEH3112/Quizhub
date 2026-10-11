@@ -109,11 +109,53 @@ function App() {
     try {
       const savedName = localStorage.getItem("profileDisplayName") || "";
       const savedPicture = localStorage.getItem("profilePicture") || "";
+      const savedTeacherId = localStorage.getItem("teacherId") || "";
       setDisplayName(savedName);
       setProfilePicture(savedPicture);
+      setTeacherId(savedTeacherId);
     } catch {
       // Ignore localStorage errors and keep the normal profile flow working.
     }
+  }, []);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    const hydrateProfileFromServer = async () => {
+      try {
+        const response = await fetch(
+          `${API}/api/profile?token=${encodeURIComponent(token)}`
+        );
+        const data = await response.json();
+
+        if (!response.ok || !data.profile) return;
+
+        const profileData = data.profile;
+        const nextDisplayName = profileData.name || profileData.student?.name || "Student";
+        const nextPicture = profileData.profilePicture || "";
+        const nextTeacherId = profileData.teacherId || "";
+
+        setProfile(profileData);
+        setUser((current) => ({
+          ...(current || {}),
+          ...profileData,
+          teacherId: nextTeacherId,
+          name: nextDisplayName,
+        }));
+        setDisplayName(nextDisplayName);
+        setProfilePicture(nextPicture);
+        setTeacherId(nextTeacherId);
+
+        if (nextDisplayName) localStorage.setItem("profileDisplayName", nextDisplayName);
+        if (nextPicture) localStorage.setItem("profilePicture", nextPicture);
+        if (nextTeacherId) localStorage.setItem("teacherId", nextTeacherId);
+      } catch {
+        // Ignore reload errors and leave the user on the login flow if needed.
+      }
+    };
+
+    hydrateProfileFromServer();
   }, []);
 
   useEffect(() => {
@@ -247,6 +289,9 @@ function App() {
             setProfilePicture(teacherProfile.profilePicture || "");
             setTeacherId(nextTeacherId);
             setUser((current) => current ? { ...current, ...teacherProfile, teacherId: nextTeacherId } : current);
+            localStorage.setItem("teacherId", nextTeacherId);
+            if (teacherProfile.profilePicture) localStorage.setItem("profilePicture", teacherProfile.profilePicture);
+            if (teacherProfile.name) localStorage.setItem("profileDisplayName", teacherProfile.name);
           }
         } catch {
           // Keep teacher login available if optional profile loading fails.
@@ -274,6 +319,8 @@ function App() {
           setDisplayName(loadedName);
           setProfilePicture(loadedPicture);
           setUser((current) => current ? { ...current, name: loadedName, rollNumber: profileStudent.rollNumber || current.rollNumber || "" } : current);
+          if (loadedName) localStorage.setItem("profileDisplayName", loadedName);
+          if (loadedPicture) localStorage.setItem("profilePicture", loadedPicture);
           setPage("dashboard");
         } else {
           setPage("profile");
@@ -375,6 +422,7 @@ function App() {
       try {
         localStorage.setItem("profileDisplayName", createdName);
         if (createdPicture) localStorage.setItem("profilePicture", createdPicture);
+        if (isTeacher && teacherId.trim()) localStorage.setItem("teacherId", teacherId.trim());
       } catch {}
       setMessage("Profile successfully create ho gaya!");
       setPage("dashboard");
@@ -452,6 +500,8 @@ function App() {
         localStorage.setItem("profileDisplayName", updatedName);
         if (updatedPicture) localStorage.setItem("profilePicture", updatedPicture);
         else localStorage.removeItem("profilePicture");
+        if (updatedTeacherId) localStorage.setItem("teacherId", updatedTeacherId);
+        else localStorage.removeItem("teacherId");
       } catch {}
       setMessage("Profile successfully update ho gaya!");
       setPage(isTeacher ? "teacherDashboard" : "dashboard");
@@ -1373,6 +1423,7 @@ function App() {
     try {
       localStorage.removeItem("profileDisplayName");
       localStorage.removeItem("profilePicture");
+      localStorage.removeItem("teacherId");
     } catch {}
     setEmail("");
     setPassword("");
