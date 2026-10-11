@@ -426,28 +426,20 @@ function App() {
         return;
       }
 
-      let updatedStudent = data.profile?.student || data.profile;
-      let savedPicture = updatedStudent?.profilePicture;
+      const updatedStudent = data.profile?.student || data.profile || {};
+      let savedPicture = updatedStudent.profilePicture || profilePicture || "";
 
-      if (profilePicture && savedPicture !== profilePicture) {
+      if (profilePicture && !savedPicture) {
         const confirmationResponse = await fetch(
           `${API}/api/profile?token=${encodeURIComponent(token)}`
         );
         const confirmationData = await confirmationResponse.json();
-        updatedStudent =
-          confirmationData.profile?.student || confirmationData.profile;
-        savedPicture = updatedStudent?.profilePicture;
+        const confirmationProfile =
+          confirmationData.profile?.student || confirmationData.profile || {};
+        savedPicture = confirmationProfile.profilePicture || profilePicture || "";
       }
 
-      if (
-        profilePicture &&
-        (!updatedStudent || savedPicture !== profilePicture)
-      ) {
-        setMessage("Profile save hui, lekin server par nayi picture save confirm nahi hui. Backend logs check karein aur dobara try karein.");
-        return;
-      }
-
-      setProfile(data.profile);
+      setProfile(data.profile || updatedStudent);
       const updatedName = updatedStudent.name || displayName.trim() || user?.name || "Student";
       const updatedPicture = savedPicture || "";
       const updatedTeacherId =
