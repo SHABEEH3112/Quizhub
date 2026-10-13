@@ -1,6 +1,7 @@
 const express = require("express");
 const jwt = require("jsonwebtoken");
 const Quiz = require("../models/Quiz");
+const User = require("../models/User");
 
 const router = express.Router();
 
@@ -8,7 +9,9 @@ const router = express.Router();
 // TEACHER AUTHENTICATION
 // =====================================================
 
-const verifyTeacher = (req, res, next) => {
+const verifyTeacher = async (req, res, next) => {
+  let decoded;
+
   try {
     const authHeader = req.headers.authorization;
 
@@ -32,20 +35,10 @@ const verifyTeacher = (req, res, next) => {
       });
     }
 
-    const decoded = jwt.verify(
+    decoded = jwt.verify(
       token,
       process.env.JWT_SECRET
     );
-
-    if (decoded.role !== "teacher") {
-      return res.status(403).json({
-        message: "Only teachers can perform this action",
-      });
-    }
-
-    req.user = decoded;
-
-    next();
   } catch (error) {
     console.log(
       "JWT VERIFY ERROR:",
@@ -57,6 +50,23 @@ const verifyTeacher = (req, res, next) => {
       message: "Invalid or expired token",
     });
   }
+
+  const user = await User.findById(decoded.userId);
+
+  if (!user) {
+    return res.status(401).json({
+      message: "User not found",
+    });
+  }
+
+  if (user.role !== "teacher") {
+    return res.status(403).json({
+      message: "Only teachers can perform this action",
+    });
+  }
+
+  req.user = { ...decoded, role: user.role };
+  next();
 };
 
 // =====================================================

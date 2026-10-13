@@ -29,7 +29,7 @@ function getToken(req) {
 // VERIFY STUDENT
 // =====================================================
 
-function verifyStudent(req, res) {
+async function verifyStudent(req, res) {
   const token = getToken(req);
 
   if (!token) {
@@ -40,22 +40,13 @@ function verifyStudent(req, res) {
     return null;
   }
 
+  let decoded;
+
   try {
-    const decoded = jwt.verify(
+    decoded = jwt.verify(
       token,
       process.env.JWT_SECRET
     );
-
-    if (decoded.role !== "student") {
-      res.status(403).json({
-        message:
-          "Only students can perform this action",
-      });
-
-      return null;
-    }
-
-    return decoded;
   } catch (error) {
     res.status(401).json({
       message: "Invalid or expired token",
@@ -63,6 +54,27 @@ function verifyStudent(req, res) {
 
     return null;
   }
+
+  const student = await User.findById(decoded.userId);
+
+  if (!student) {
+    res.status(401).json({
+      message: "User not found",
+    });
+
+    return null;
+  }
+
+  if (student.role !== "student") {
+    res.status(403).json({
+      message:
+        "Only students can perform this action",
+    });
+
+    return null;
+  }
+
+  return { ...decoded, role: student.role };
 }
 
 // =====================================================
@@ -361,7 +373,7 @@ router.post(
   async (req, res) => {
     try {
       const decoded =
-        verifyStudent(req, res);
+        await verifyStudent(req, res);
 
       if (!decoded) return;
 
@@ -613,7 +625,7 @@ router.post(
   async (req, res) => {
     try {
       const decoded =
-        verifyStudent(req, res);
+        await verifyStudent(req, res);
 
       if (!decoded) return;
 
@@ -1168,30 +1180,8 @@ router.get(
   "/",
   async (req, res) => {
     try {
-      const token =
-        getToken(req);
-
-      if (!token) {
-        return res.status(401).json({
-          message:
-            "Token is required",
-        });
-      }
-
-      const decoded =
-        jwt.verify(
-          token,
-          process.env.JWT_SECRET
-        );
-
-      if (
-        decoded.role !== "student"
-      ) {
-        return res.status(403).json({
-          message:
-            "Only students can view quiz history",
-        });
-      }
+      const decoded = await verifyStudent(req, res);
+      if (!decoded) return;
 
       const attempts =
         await Attempt.find({

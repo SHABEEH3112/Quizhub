@@ -109,6 +109,76 @@ test("teacher login and profile data include persisted teacherId", async () => {
   assert.equal(refreshedProfileData.profile.profilePicture, "data:image/png;base64,dGVzdA==");
 });
 
+test("teacher quiz access uses the current database role, not a stale token role", async () => {
+  const teacher = await new User({
+    name: "Promoted Teacher",
+    email: "promoted-teacher@example.test",
+    password: "hashed-password",
+    role: "teacher",
+  }).save();
+  const student = await new User({
+    name: "Regular Student",
+    email: "regular-student@example.test",
+    password: "hashed-password",
+    role: "student",
+  }).save();
+  const staleTeacherToken = jwt.sign({
+    userId: teacher._id,
+    role: "student",
+  }, process.env.JWT_SECRET);
+  const forgedTeacherToken = jwt.sign({
+    userId: student._id,
+    role: "teacher",
+  }, process.env.JWT_SECRET);
+
+  const teacherResponse = await fetch(
+    `${baseUrl}/api/quizzes/teacher/my-quizzes`,
+    { headers: { Authorization: `Bearer ${staleTeacherToken}` } }
+  );
+  assert.equal(teacherResponse.status, 200);
+
+  const studentResponse = await fetch(
+    `${baseUrl}/api/quizzes/teacher/my-quizzes`,
+    { headers: { Authorization: `Bearer ${forgedTeacherToken}` } }
+  );
+  assert.equal(studentResponse.status, 403);
+});
+
+test("student quiz access uses the current database role, not a stale token role", async () => {
+  const student = await new User({
+    name: "Promoted Student",
+    email: "promoted-student@example.test",
+    password: "hashed-password",
+    role: "student",
+  }).save();
+  const teacher = await new User({
+    name: "Regular Teacher",
+    email: "regular-teacher@example.test",
+    password: "hashed-password",
+    role: "teacher",
+  }).save();
+  const staleStudentToken = jwt.sign({
+    userId: student._id,
+    role: "teacher",
+  }, process.env.JWT_SECRET);
+  const forgedStudentToken = jwt.sign({
+    userId: teacher._id,
+    role: "student",
+  }, process.env.JWT_SECRET);
+
+  const studentResponse = await fetch(
+    `${baseUrl}/api/attempts`,
+    { headers: { Authorization: `Bearer ${staleStudentToken}` } }
+  );
+  assert.equal(studentResponse.status, 200);
+
+  const teacherResponse = await fetch(
+    `${baseUrl}/api/attempts`,
+    { headers: { Authorization: `Bearer ${forgedStudentToken}` } }
+  );
+  assert.equal(teacherResponse.status, 403);
+});
+
 test("forgot password fails clearly when the mail server rejects the request", async () => {
   const user = await new User({
     name: "Reset Failure User",
@@ -181,8 +251,14 @@ test("password reset token is emailed, hashed in SQLite, and not returned by the
 });
 
 test("quiz creation respects manual total marks when validating passing marks", async () => {
+  const teacher = await new User({
+    name: "Quiz Creation Teacher",
+    email: "quiz-creation-teacher@example.test",
+    password: "hashed-password",
+    role: "teacher",
+  }).save();
   const teacherToken = jwt.sign(
-    { userId: "teacher-id", role: "teacher" },
+    { userId: teacher._id, role: "teacher" },
     process.env.JWT_SECRET
   );
   const response = await postJson("/api/quizzes", {
