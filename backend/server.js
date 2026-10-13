@@ -13,6 +13,8 @@ const profileRoutes = require("./routes/profile");
 const app = express();
 app.set("trust proxy", 1);
 const port = Number(process.env.PORT) || 5000;
+const clientUrl = process.env.CLIENT_URL?.trim();
+const clientOrigin = clientUrl ? new URL(clientUrl).origin : true;
 let databaseConnection;
 
 const ensureDatabaseConnection = () => {
@@ -39,7 +41,7 @@ const apiLimiter = rateLimit({
 app.use(helmet());
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || true,
+    origin: clientOrigin,
     credentials: true,
   })
 );
