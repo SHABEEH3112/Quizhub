@@ -157,36 +157,34 @@ router.put("/", verifyToken, async (req, res) => {
       });
     }
 
+    const updates = {};
+
     if (req.body.name !== undefined) {
       const name = String(req.body.name).trim();
 
       if (name) {
-        user.name = name;
+        updates.name = name;
       }
     }
 
     if (req.body.className !== undefined) {
-      user.className =
-        String(req.body.className).trim();
+      updates.className = String(req.body.className).trim();
     }
 
     if (req.body.section !== undefined) {
-      user.section =
-        String(req.body.section).trim();
+      updates.section = String(req.body.section).trim();
     }
 
     if (req.body.rollNumber !== undefined) {
-      user.rollNumber =
-        String(req.body.rollNumber).trim();
+      updates.rollNumber = String(req.body.rollNumber).trim();
     }
 
     if (req.body.subject !== undefined) {
-      user.subject =
-        String(req.body.subject).trim();
+      updates.subject = String(req.body.subject).trim();
     }
 
     if (req.body.teacherId !== undefined) {
-      user.teacherId = String(req.body.teacherId).trim();
+      updates.teacherId = String(req.body.teacherId).trim();
     }
 
     if (req.body.profilePicture !== undefined) {
@@ -200,10 +198,10 @@ router.put("/", verifyToken, async (req, res) => {
         });
       }
 
-      user.profilePicture = picture;
+      updates.profilePicture = picture;
     }
 
-    await user.save();
+    await User.findOneAndUpdate({ _id: user._id }, updates);
 
     const updatedUser =
       await User.findById(user._id).select(profileFields);
