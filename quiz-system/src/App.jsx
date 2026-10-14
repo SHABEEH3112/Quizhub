@@ -1050,9 +1050,11 @@ function App() {
     try {
       const response = await fetch(`${API}/api/quizzes/${editingQuizId}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
-          token,
           title: editQuizTitle.trim(),
           subject: editQuizSubject.trim(),
           department: editQuizDepartment.trim(),

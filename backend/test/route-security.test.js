@@ -185,8 +185,8 @@ test("student quiz listings and attempts enforce department, class, and section 
     email: "section-a@example.test",
     password: "hashed-password",
     role: "student",
-    className: "BSCS 5",
-    section: "A",
+    className: "3rd",
+    section: "6M",
   }).save();
   const studentToken = jwt.sign(
     { userId: student._id, role: "student" },
@@ -197,12 +197,14 @@ test("student quiz listings and attempts enforce department, class, and section 
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       token: studentToken,
-      department: "Computer Science",
+      department: "Software Engineering",
+      className: "3rd",
+      section: "6M",
     }),
   });
   const profileData = await profileResponse.json();
   assert.equal(profileResponse.status, 200);
-  assert.equal(profileData.profile.department, "Computer Science");
+  assert.equal(profileData.profile.department, "Software Engineering");
 
   const teacher = await new User({
     name: "Assignment Teacher",
@@ -215,9 +217,9 @@ test("student quiz listings and attempts enforce department, class, and section 
     title: "Matching class quiz",
     createdBy: teacher._id,
     status: "published",
-    assignedDepartment: "computer science",
-    assignedClassSemester: "bscs 5",
-    assignedSection: "Section A",
+    assignedDepartment: "Bs Software Engineering",
+    assignedClassSemester: "3rd Semester",
+    assignedSection: "6M",
     questions: [{
       question: "Test question?",
       options: ["A", "B", "C", "D"],
@@ -229,17 +231,17 @@ test("student quiz listings and attempts enforce department, class, and section 
     title: "Wrong section quiz",
     createdBy: teacher._id,
     status: "published",
-    assignedDepartment: "Computer Science",
-    assignedClassSemester: "BSCS 5",
-    assignedSection: "B",
+    assignedDepartment: "Software Engineering",
+    assignedClassSemester: "3rd",
+    assignedSection: "6N",
   }).save();
   const missingProfileQuiz = await new Quiz({
     title: "Missing profile data quiz",
     createdBy: teacher._id,
     status: "published",
-    assignedDepartment: "Computer Science",
-    assignedClassSemester: "BSCS 5",
-    assignedSection: "A",
+    assignedDepartment: "BS Software Engineering",
+    assignedClassSemester: "3rd Semester",
+    assignedSection: "6M",
   }).save();
   const unprofiledStudent = await new User({
     name: "Unprofiled Student",
@@ -392,11 +394,13 @@ test("quiz creation respects manual total marks when validating passing marks", 
     `${baseUrl}/api/quizzes/${responseData.quiz._id}`,
     {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        token: teacherToken,
         assignedSection: "B",
       }),
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${teacherToken}`,
+      },
     }
   );
   const updatedQuiz = await updateResponse.json();

@@ -1,4 +1,12 @@
-const normalize = (value) => String(value ?? "").trim().toLowerCase();
+const normalize = (value) => String(value ?? "")
+  .trim()
+  .toLowerCase()
+  .replace(/\bsemester\b|\bsem\b/g, "")
+  .replace(/\s+/g, " ")
+  .trim();
+
+const normalizeDepartment = (value) =>
+  normalize(value).replace(/^(?:bs|bsc|bscs|be|bba|ba|ms|msc|mcs)\s+/, "");
 
 const normalizeSection = (value) =>
   normalize(value).replace(/^section\s+/, "");
@@ -15,7 +23,8 @@ const isQuizAssignedToStudent = (quiz, student) => {
   if (
     !matchesAssignedValue(
       quiz.assignedDepartment,
-      student.department
+      student.department,
+      normalizeDepartment
     )
   ) {
     return false;
