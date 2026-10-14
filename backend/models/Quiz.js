@@ -21,6 +21,7 @@ class Quiz extends SQLiteModel {
       endDateTime: null,
       assignedDepartment: "",
       assignedClassSemester: "",
+      assignedSection: "",
       studentGroup: "All Students",
       status: "draft",
       ...data,

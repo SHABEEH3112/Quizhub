@@ -15,6 +15,7 @@ function App() {
 
   const [className, setClassName] = useState("");
   const [section, setSection] = useState("");
+  const [studentDepartment, setStudentDepartment] = useState("");
   const [rollNumber, setRollNumber] = useState("");
   const [subject, setSubject] = useState("");
   const [profilePicture, setProfilePicture] = useState("");
@@ -70,6 +71,7 @@ function App() {
 
   const [newQuizAssignedDepartment, setNewQuizAssignedDepartment] = useState("");
   const [newQuizAssignedClassSemester, setNewQuizAssignedClassSemester] = useState("");
+  const [newQuizAssignedSection, setNewQuizAssignedSection] = useState("");
   const [newQuizStudentGroup, setNewQuizStudentGroup] = useState("All Students");
   const [newQuizStatus, setNewQuizStatus] = useState("published");
 
@@ -98,6 +100,7 @@ function App() {
   const [editQuizEndDateTime, setEditQuizEndDateTime] = useState("");
   const [editQuizAssignedDepartment, setEditQuizAssignedDepartment] = useState("");
   const [editQuizAssignedClassSemester, setEditQuizAssignedClassSemester] = useState("");
+  const [editQuizAssignedSection, setEditQuizAssignedSection] = useState("");
   const [editQuizStudentGroup, setEditQuizStudentGroup] = useState("All Students");
   const [editQuizStatus, setEditQuizStatus] = useState("published");
   const [editQuizQuestions, setEditQuizQuestions] = useState([]);
@@ -199,6 +202,7 @@ function App() {
     const nextTeacherId = String(baseProfile.teacherId || "").trim();
     const nextClassName = String(baseProfile.className || "").trim();
     const nextSection = String(baseProfile.section || "").trim();
+    const nextDepartment = String(baseProfile.department || "").trim();
     const nextRollNumber = String(baseProfile.rollNumber || "").trim();
     const nextSubject = String(baseProfile.subject || "").trim();
 
@@ -208,6 +212,7 @@ function App() {
     setTeacherId(nextTeacherId);
     setClassName(nextClassName);
     setSection(nextSection);
+    setStudentDepartment(nextDepartment);
     setRollNumber(nextRollNumber);
     setSubject(nextSubject);
     setUser((current) => ({
@@ -410,6 +415,7 @@ function App() {
           name: displayName.trim() || user?.name || "",
           className,
           section,
+          department: studentDepartment,
           rollNumber,
           subject,
           profilePicture,
@@ -458,7 +464,13 @@ function App() {
       if (isTeacher) {
         profileUpdate.teacherId = teacherId.trim();
       } else {
-        Object.assign(profileUpdate, { className, section, rollNumber, subject });
+        Object.assign(profileUpdate, {
+          className,
+          section,
+          department: studentDepartment,
+          rollNumber,
+          subject,
+        });
       }
 
       const response = await fetch(`${API}/api/profile`, {
@@ -519,6 +531,7 @@ function App() {
 
     setNewQuizAssignedDepartment("");
     setNewQuizAssignedClassSemester("");
+    setNewQuizAssignedSection("");
     setNewQuizStudentGroup("All Students");
     setNewQuizStatus("published");
 
@@ -696,6 +709,7 @@ function App() {
             : null,
           assignedDepartment: newQuizAssignedDepartment.trim(),
           assignedClassSemester: newQuizAssignedClassSemester.trim(),
+          assignedSection: newQuizAssignedSection.trim(),
           studentGroup: newQuizStudentGroup.trim() || "All Students",
           status: statusToSave,
           questions: newQuizQuestions.map((item) => ({
@@ -862,6 +876,7 @@ function App() {
 
     setEditQuizAssignedDepartment(quiz.assignedDepartment || "");
     setEditQuizAssignedClassSemester(quiz.assignedClassSemester || "");
+    setEditQuizAssignedSection(quiz.assignedSection || "");
     setEditQuizStudentGroup(quiz.studentGroup || "All Students");
     setEditQuizStatus(quiz.status || "published");
 
@@ -1058,6 +1073,7 @@ function App() {
             : null,
           assignedDepartment: editQuizAssignedDepartment.trim(),
           assignedClassSemester: editQuizAssignedClassSemester.trim(),
+          assignedSection: editQuizAssignedSection.trim(),
           studentGroup: editQuizStudentGroup.trim() || "All Students",
           status: editQuizStatus,
           questions: editQuizQuestions.map((item) => ({
@@ -1093,6 +1109,7 @@ function App() {
       setEditQuizEndDateTime("");
       setEditQuizAssignedDepartment("");
       setEditQuizAssignedClassSemester("");
+      setEditQuizAssignedSection("");
       setEditQuizStudentGroup("All Students");
       setEditQuizStatus("published");
       setEditQuizQuestions([]);
@@ -1111,7 +1128,10 @@ function App() {
     setMessage("Quizzes load ho rahe hain...");
 
     try {
-      const response = await fetch(`${API}/api/quizzes`);
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `${API}/api/quizzes?token=${encodeURIComponent(token || "")}`
+      );
       const data = await response.json();
 
       if (!response.ok) {
@@ -1330,7 +1350,7 @@ function App() {
     const refreshDashboardData = async () => {
       try {
         const [quizResponse, historyResponse] = await Promise.all([
-          fetch(`${API}/api/quizzes`),
+          fetch(`${API}/api/quizzes?token=${encodeURIComponent(token)}`),
           fetch(`${API}/api/attempts?token=${encodeURIComponent(token)}`),
         ]);
 
@@ -1408,6 +1428,7 @@ function App() {
     setDisplayName("");
     setProfilePicture("");
     setTeacherId("");
+    setStudentDepartment("");
     try {
       localStorage.removeItem("profileDisplayName");
       localStorage.removeItem("profilePicture");
@@ -2091,6 +2112,7 @@ function App() {
                 <input style={styles.input} placeholder="Full Name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} required />
                 <input style={styles.input} placeholder="Class" value={className} onChange={(e) => setClassName(e.target.value)} required />
                 <input style={styles.input} placeholder="Section" value={section} onChange={(e) => setSection(e.target.value)} required />
+                <input style={styles.input} placeholder="Department (optional)" value={studentDepartment} onChange={(e) => setStudentDepartment(e.target.value)} />
                 <input style={styles.input} placeholder="Roll Number" value={rollNumber} onChange={(e) => setRollNumber(e.target.value)} required />
                 <input style={styles.input} placeholder="Subject" value={subject} onChange={(e) => setSubject(e.target.value)} required />
                 <HoverButton style={styles.button} type="submit">Save Profile ✓</HoverButton>
@@ -2105,10 +2127,14 @@ function App() {
                 .map((attempt) => attempt.quiz?._id || attempt.quiz)
                 .filter(Boolean)
                 .map((id) => id.toString())
+                .filter((id) => quizzes.some((quiz) => String(quiz._id) === id))
             );
 
             const completedCount = completedQuizIds.size;
             const pendingCount = Math.max(0, quizzes.length - completedCount);
+            const completedQuizzes = quizzes.filter((quiz) =>
+              completedQuizIds.has(String(quiz._id))
+            );
             const averageScore = history.length
               ? Math.round(
                   history.reduce((sum, attempt) => {
@@ -2341,7 +2367,11 @@ function App() {
                                     <span style={{ padding: "3px 6px", borderRadius: "15px", background: status.bg, color: status.color, fontSize: "8px", fontWeight: 800 }}>{status.label}</span>
                                   </div>
                                   <div style={{ color: "#64748b", fontSize: "9px", marginTop: "3px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{quiz.description || "Test your knowledge and improve your skills."}</div>
-                                  <div style={{ display: "flex", gap: "7px", marginTop: "5px", color: "#64748b", fontSize: "8px", flexWrap: "wrap" }}><span>📚 {quiz.subject || "General"}</span><span>🏛️ {quiz.department || "All"}</span><span>👥 {quiz.classSemester || "All Classes"}</span></div>
+                                  <div style={{ display: "flex", gap: "7px", marginTop: "5px", color: "#64748b", fontSize: "8px", flexWrap: "wrap" }}>
+                                    <span>📚 {quiz.subject || "General"}</span>
+                                    <span>🏛️ {quiz.assignedDepartment || quiz.department || "All"}</span>
+                                    <span>👥 {quiz.assignedClassSemester || quiz.classSemester || "All Classes"}{quiz.assignedSection ? ` • Section ${quiz.assignedSection}` : ""}</span>
+                                  </div>
                                 </div>
                                 <div style={{ color: "#475569", fontSize: "9px", display: "grid", gap: "4px" }}><div>◷ Time: {quiz.timeLimit || 30} min</div><div>▣ Marks: {totalMarks}</div><div>✓ Pass: {quiz.passingMarks || 0}</div></div>
                                 <div style={{ display: "grid", gap: "5px" }}><div style={{ color: "#64748b", fontSize: "8px" }}>📅 {formatDashboardDate(quiz.startDateTime)}</div><HoverButton style={{ ...styles.smallButton, width: "100%", padding: "7px 8px", fontSize: "9px", opacity: status.available ? 1 : .55 }} disabled={!status.available} onClick={() => status.available && handleOpenQuiz(quiz)}>{status.available ? "▶ Take Quiz" : "◷ Not Available"}</HoverButton></div>
@@ -2362,7 +2392,7 @@ function App() {
                     <aside style={{ display: "grid", alignContent: "start", gap: "12px" }}>
                       <div style={{ background: "var(--theme-panel)", border: "1px solid var(--theme-border)", borderRadius: "12px", padding: "15px" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}><div style={{ width: "48px", height: "48px", borderRadius: "50%", background: "#0f4a9b", color: "#fff", display: "grid", placeItems: "center", fontSize: "21px", fontWeight: 800 }}>{profilePicture ? <img src={profilePicture} alt="Profile" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} /> : shownName.charAt(0).toUpperCase()}</div><div><strong style={{ color: "#173b72", fontSize: "12px" }}>{shownName}</strong><div style={{ color: "#64748b", fontSize: "9px" }}>Student</div></div></div>
-                        <div style={{ marginTop: "14px", display: "grid", gap: "9px", color: "#475569", fontSize: "9px" }}><div>♙ <strong>Class / Semester</strong><br/><span style={{ marginLeft: "18px" }}>{profile?.className || "Not set"} {profile?.section ? `• ${profile.section}` : ""}</span></div><div>⌂ <strong>Department</strong><br/><span style={{ marginLeft: "18px" }}>{profile?.department || "Software Engineering"}</span></div><div>◎ <strong>Roll No</strong><br/><span style={{ marginLeft: "18px" }}>{profile?.rollNumber || user?.rollNumber || "Not set"}</span></div></div>
+                        <div style={{ marginTop: "14px", display: "grid", gap: "9px", color: "#475569", fontSize: "9px" }}><div>♙ <strong>Class / Semester</strong><br/><span style={{ marginLeft: "18px" }}>{profile?.className || "Not set"} {profile?.section ? `• ${profile.section}` : ""}</span></div><div>⌂ <strong>Department</strong><br/><span style={{ marginLeft: "18px" }}>{profile?.department || "Not set"}</span></div><div>◎ <strong>Roll No</strong><br/><span style={{ marginLeft: "18px" }}>{profile?.rollNumber || user?.rollNumber || "Not set"}</span></div></div>
                         <button type="button" onClick={() => { clearMessage(); setPage("editProfile"); }} style={{ marginTop: "13px", width: "100%", border: "1px solid #dbeafe", background: "#f7fbff", color: "#24508a", borderRadius: "7px", padding: "8px", fontWeight: 700, cursor: "pointer", fontSize: "9px" }}>♙ View Profile</button>
                       </div>
 
@@ -2379,6 +2409,11 @@ function App() {
                       <div style={{ background: "var(--theme-panel)", border: "1px solid var(--theme-border)", borderRadius: "12px", padding: "13px" }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}><h3 style={{ margin: 0, color: "var(--theme-text)", fontSize: "13px" }}>▣ Upcoming Quizzes</h3><button type="button" onClick={() => setPage("quizList")} style={{ border: "none", background: "transparent", color: "#36d7f5", cursor: "pointer", fontSize: "9px", fontWeight: 700 }}>View All</button></div>
                         {upcomingQuizzes.length === 0 ? <div style={{ color: "#64748b", fontSize: "9px", padding: "5px 0" }}>No upcoming quizzes.</div> : upcomingQuizzes.map((quiz) => <div key={quiz._id} style={{ borderTop: "1px solid #edf2f7", padding: "8px 0" }}><div style={{ display: "flex", justifyContent: "space-between", gap: "5px" }}><strong style={{ color: "#334155", fontSize: "9px" }}>{quiz.title}</strong><span style={{ color: "#dc2626", background: "#fef2f2", padding: "3px 5px", borderRadius: "10px", fontSize: "7px", fontWeight: 800 }}>Pending</span></div><div style={{ marginTop: "3px", color: "#64748b", fontSize: "8px" }}>{formatDashboardDate(quiz.startDateTime)}</div></div>)}
+                      </div>
+
+                      <div style={{ background: "var(--theme-panel)", border: "1px solid var(--theme-border)", borderRadius: "12px", padding: "13px" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}><h3 style={{ margin: 0, color: "var(--theme-text)", fontSize: "13px" }}>✓ Completed Quizzes</h3><button type="button" onClick={() => setPage("quizList")} style={{ border: "none", background: "transparent", color: "#36d7f5", cursor: "pointer", fontSize: "9px", fontWeight: 700 }}>View All</button></div>
+                        {completedQuizzes.length === 0 ? <div style={{ color: "#64748b", fontSize: "9px", padding: "5px 0" }}>No completed quizzes yet.</div> : completedQuizzes.slice(0, 3).map((quiz) => <div key={quiz._id} style={{ borderTop: "1px solid #edf2f7", padding: "8px 0" }}><strong style={{ color: "#334155", fontSize: "9px" }}>{quiz.title}</strong><div style={{ marginTop: "3px", color: "#15803d", fontSize: "8px" }}>Completed</div></div>)}
                       </div>
                     </aside>
                   </div>
@@ -2533,7 +2568,7 @@ function App() {
 
                         {/* SCORE */}
                         <div>
-                          {attempt.score} / {attempt.totalQuestions}
+                          {attempt.score} / {attempt.totalMarks ?? attempt.totalQuestions}
                         </div>
 
                         {/* PERCENTAGE */}
@@ -2931,6 +2966,16 @@ function App() {
                         placeholder="e.g. 5th Semester"
                         value={newQuizAssignedClassSemester}
                         onChange={(e) => setNewQuizAssignedClassSemester(e.target.value)}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={styles.formLabel}>Section</label>
+                      <input
+                        style={styles.input}
+                        placeholder="e.g. A"
+                        value={newQuizAssignedSection}
+                        onChange={(e) => setNewQuizAssignedSection(e.target.value)}
                       />
                     </div>
 
@@ -3407,6 +3452,16 @@ function App() {
                     </div>
 
                     <div>
+                      <label style={styles.formLabel}>Section</label>
+                      <input
+                        style={styles.input}
+                        placeholder="e.g. A"
+                        value={editQuizAssignedSection}
+                        onChange={(e) => setEditQuizAssignedSection(e.target.value)}
+                      />
+                    </div>
+
+                    <div>
                       <label style={styles.formLabel}>Student Group</label>
                       <select
                         style={styles.input}
@@ -3465,6 +3520,7 @@ function App() {
                   setEditQuizEndDateTime("");
                   setEditQuizAssignedDepartment("");
                   setEditQuizAssignedClassSemester("");
+                  setEditQuizAssignedSection("");
                   setEditQuizStudentGroup("All Students");
                   setEditQuizStatus("published");
                   setEditQuizQuestions([]);
@@ -3571,6 +3627,7 @@ function App() {
                 .map((attempt) => attempt.quiz?._id || attempt.quiz)
                 .filter(Boolean)
                 .map((id) => id.toString())
+                .filter((id) => quizzes.some((quiz) => String(quiz._id) === id))
             );
 
             const completedCount = completedQuizIds.size;
@@ -3846,8 +3903,8 @@ function App() {
                                 <p style={{ margin: "6px 0 8px", color: "#64748b", fontSize: "11px", lineHeight: 1.45 }}>{quiz.description || "Test your knowledge and improve your skills."}</p>
                                 <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", color: "#64748b", fontSize: "10px" }}>
                                   <span>📚 {quiz.subject || "General"}</span>
-                                  <span>🏛️ {quiz.department || "All Departments"}</span>
-                                  <span>👥 {quiz.classSemester || "All Classes"}</span>
+                                  <span>🏛️ {quiz.assignedDepartment || quiz.department || "All Departments"}</span>
+                                  <span>👥 {quiz.assignedClassSemester || quiz.classSemester || "All Classes"}{quiz.assignedSection ? ` • Section ${quiz.assignedSection}` : ""}</span>
                                 </div>
                               </div>
 
@@ -4057,6 +4114,7 @@ function App() {
                   <>
                     <input style={styles.input} placeholder="Class" value={className} onChange={(e) => setClassName(e.target.value)} required />
                     <input style={styles.input} placeholder="Section" value={section} onChange={(e) => setSection(e.target.value)} required />
+                    <input style={styles.input} placeholder="Department (optional)" value={studentDepartment} onChange={(e) => setStudentDepartment(e.target.value)} />
                     <input style={styles.input} placeholder="Roll Number" value={rollNumber} onChange={(e) => setRollNumber(e.target.value)} required />
                     <input style={styles.input} placeholder="Subject" value={subject} onChange={(e) => setSubject(e.target.value)} required />
                   </>

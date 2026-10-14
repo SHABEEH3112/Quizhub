@@ -179,6 +179,110 @@ test("student quiz access uses the current database role, not a stale token role
   assert.equal(teacherResponse.status, 403);
 });
 
+test("student quiz listings and attempts enforce department, class, and section assignments", async () => {
+  const student = await new User({
+    name: "Section A Student",
+    email: "section-a@example.test",
+    password: "hashed-password",
+    role: "student",
+    className: "BSCS 5",
+    section: "A",
+  }).save();
+  const studentToken = jwt.sign(
+    { userId: student._id, role: "student" },
+    process.env.JWT_SECRET
+  );
+  const profileResponse = await fetch(`${baseUrl}/api/profile`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      token: studentToken,
+      department: "Computer Science",
+    }),
+  });
+  const profileData = await profileResponse.json();
+  assert.equal(profileResponse.status, 200);
+  assert.equal(profileData.profile.department, "Computer Science");
+
+  const teacher = await new User({
+    name: "Assignment Teacher",
+    email: "assignment-teacher@example.test",
+    password: "hashed-password",
+    role: "teacher",
+  }).save();
+
+  const matchingQuiz = await new Quiz({
+    title: "Matching class quiz",
+    createdBy: teacher._id,
+    status: "published",
+    assignedDepartment: "computer science",
+    assignedClassSemester: "bscs 5",
+    assignedSection: "Section A",
+    questions: [{
+      question: "Test question?",
+      options: ["A", "B", "C", "D"],
+      correctAnswer: "A",
+      marks: 1,
+    }],
+  }).save();
+  const wrongSectionQuiz = await new Quiz({
+    title: "Wrong section quiz",
+    createdBy: teacher._id,
+    status: "published",
+    assignedDepartment: "Computer Science",
+    assignedClassSemester: "BSCS 5",
+    assignedSection: "B",
+  }).save();
+  const missingProfileQuiz = await new Quiz({
+    title: "Missing profile data quiz",
+    createdBy: teacher._id,
+    status: "published",
+    assignedDepartment: "Computer Science",
+    assignedClassSemester: "BSCS 5",
+    assignedSection: "A",
+  }).save();
+  const unprofiledStudent = await new User({
+    name: "Unprofiled Student",
+    email: "unprofiled@example.test",
+    password: "hashed-password",
+    role: "student",
+  }).save();
+  const unprofiledToken = jwt.sign(
+    { userId: unprofiledStudent._id, role: "student" },
+    process.env.JWT_SECRET
+  );
+
+  const listingResponse = await fetch(
+    `${baseUrl}/api/quizzes?token=${encodeURIComponent(studentToken)}`
+  );
+  const listedQuizzes = await listingResponse.json();
+  assert.equal(listingResponse.status, 200);
+  assert.ok(listedQuizzes.some((quiz) => quiz._id === matchingQuiz._id));
+  assert.ok(listedQuizzes.every((quiz) => quiz._id !== wrongSectionQuiz._id));
+
+  const mismatchedStudentResponse = await fetch(
+    `${baseUrl}/api/quizzes?token=${encodeURIComponent(unprofiledToken)}`
+  );
+  const unprofiledQuizzes = await mismatchedStudentResponse.json();
+  assert.ok(unprofiledQuizzes.every((quiz) => (
+    quiz._id !== matchingQuiz._id &&
+    quiz._id !== wrongSectionQuiz._id &&
+    quiz._id !== missingProfileQuiz._id
+  )));
+
+  const matchingStartResponse = await postJson("/api/attempts/start", {
+    token: studentToken,
+    quizId: matchingQuiz._id,
+  });
+  assert.equal(matchingStartResponse.status, 200);
+
+  const wrongSectionStartResponse = await postJson("/api/attempts/start", {
+    token: studentToken,
+    quizId: wrongSectionQuiz._id,
+  });
+  assert.equal(wrongSectionStartResponse.status, 403);
+});
+
 test("forgot password fails clearly when the mail server rejects the request", async () => {
   const user = await new User({
     name: "Reset Failure User",
@@ -267,6 +371,9 @@ test("quiz creation respects manual total marks when validating passing marks", 
     timeLimit: 10,
     totalMarks: 10,
     passingMarks: 9,
+    assignedDepartment: "Computer Science",
+    assignedClassSemester: "BSCS 5",
+    assignedSection: "A",
     questions: [{
       question: "A test question?",
       options: ["A", "B", "C", "D"],
@@ -279,6 +386,22 @@ test("quiz creation respects manual total marks when validating passing marks", 
   assert.equal(response.status, 201);
   assert.equal(responseData.quiz.totalMarks, 10);
   assert.equal(responseData.quiz.passingMarks, 9);
+  assert.equal(responseData.quiz.assignedSection, "A");
+
+  const updateResponse = await fetch(
+    `${baseUrl}/api/quizzes/${responseData.quiz._id}`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        token: teacherToken,
+        assignedSection: "B",
+      }),
+    }
+  );
+  const updatedQuiz = await updateResponse.json();
+  assert.equal(updateResponse.status, 200);
+  assert.equal(updatedQuiz.quiz.assignedSection, "B");
 });
 
 test("attempt submission rejects repeated answers for the same question", async () => {
@@ -325,6 +448,12 @@ test("attempt submission rejects repeated answers for the same question", async 
 });
 
 test("attempt submission still scores and persists a valid answer set", async () => {
+  const teacher = await new User({
+    name: "Scoring Teacher",
+    email: "scoring-teacher@example.test",
+    password: "hashed-password",
+    role: "teacher",
+  }).save();
   const student = await new User({
     name: "Scoring Student",
     email: "scoring@example.test",
@@ -333,7 +462,7 @@ test("attempt submission still scores and persists a valid answer set", async ()
   }).save();
   const quiz = await new Quiz({
     title: "Valid scoring test",
-    createdBy: "teacher-id",
+    createdBy: teacher._id,
     status: "published",
     timeLimit: 30,
     passingMarks: 3,
@@ -378,6 +507,26 @@ test("attempt submission still scores and persists a valid answer set", async ()
   assert.equal(result.percentage, 100);
   assert.equal(result.passed, true);
   assert.equal(await Attempt.countDocuments({ student: student._id, quiz: quiz._id }), 1);
+
+  const historyResponse = await fetch(
+    `${baseUrl}/api/attempts?token=${encodeURIComponent(studentToken)}`
+  );
+  const history = await historyResponse.json();
+  assert.equal(historyResponse.status, 200);
+  assert.equal(history.attempts[0].quiz.subject, "");
+  assert.equal(history.attempts[0].totalMarks, 5);
+
+  const teacherToken = jwt.sign(
+    { userId: teacher._id, role: "teacher" },
+    process.env.JWT_SECRET
+  );
+  const teacherResultsResponse = await fetch(
+    `${baseUrl}/api/attempts/teacher/results?token=${encodeURIComponent(teacherToken)}`
+  );
+  const teacherResults = await teacherResultsResponse.json();
+  assert.equal(teacherResultsResponse.status, 200);
+  assert.equal(teacherResults.attempts[0].totalMarks, 5);
+  assert.equal(teacherResults.attempts[0].student.name, "Scoring Student");
 });
 
 test("attempt submission rejects a session after its deadline grace period", async () => {

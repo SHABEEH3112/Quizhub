@@ -5,6 +5,7 @@ const crypto = require("crypto");
 const Attempt = require("../models/Attempt");
 const Quiz = require("../models/Quiz");
 const User = require("../models/User");
+const { isQuizAssignedToStudent } = require("../utils/quizAssignment");
 
 const router = express.Router();
 
@@ -208,95 +209,6 @@ function buildStudentQuestions(quiz) {
 }
 
 // =====================================================
-// ASSIGNMENT CHECK
-// =====================================================
-
-function checkAssignment(quiz, student) {
-  const assignedDepartment =
-    String(
-      quiz.assignedDepartment || ""
-    )
-      .trim()
-      .toLowerCase();
-
-  const assignedClass =
-    String(
-      quiz.assignedClassSemester || ""
-    )
-      .trim()
-      .toLowerCase();
-
-  const assignedGroup =
-    String(
-      quiz.studentGroup ||
-        "All Students"
-    )
-      .trim()
-      .toLowerCase();
-
-  const studentDepartment =
-    String(
-      student.department ||
-        ""
-    )
-      .trim()
-      .toLowerCase();
-
-  const studentClass =
-    String(
-      student.classSemester ||
-        student.className ||
-        ""
-    )
-      .trim()
-      .toLowerCase();
-
-  const studentGroup =
-    String(
-      student.studentGroup ||
-        ""
-    )
-      .trim()
-      .toLowerCase();
-
-  // If quiz has department assignment
-  // and student's department is available,
-  // verify it.
-  if (
-    assignedDepartment &&
-    studentDepartment &&
-    assignedDepartment !==
-      studentDepartment
-  ) {
-    return false;
-  }
-
-  // If quiz has class assignment
-  // and student's class is available,
-  // verify it.
-  if (
-    assignedClass &&
-    studentClass &&
-    assignedClass !==
-      studentClass
-  ) {
-    return false;
-  }
-
-  // If specific student group is assigned
-  if (
-    assignedGroup &&
-    assignedGroup !== "all students" &&
-    studentGroup &&
-    assignedGroup !== studentGroup
-  ) {
-    return false;
-  }
-
-  return true;
-}
-
-// =====================================================
 // FIND ORIGINAL QUESTION
 // =====================================================
 
@@ -439,7 +351,7 @@ router.post(
       // -------------------------------------------------
 
       if (
-        !checkAssignment(
+        !isQuizAssignedToStudent(
           quiz,
           student
         )
@@ -740,7 +652,7 @@ router.post(
       // -------------------------------------------------
 
       if (
-        !checkAssignment(
+        !isQuizAssignedToStudent(
           quiz,
           student
         )
@@ -1190,7 +1102,7 @@ router.get(
         })
           .populate(
             "quiz",
-            "title description timeLimit numberOfAttempts totalMarks passingMarks"
+              "title description subject timeLimit numberOfAttempts totalMarks passingMarks"
           )
           .sort({
             createdAt: -1,
@@ -1258,7 +1170,7 @@ router.get(
         })
           .populate(
             "student",
-            "name email rollNumber"
+            "name email rollNumber className section department"
           )
           .populate(
             "quiz",

@@ -45,6 +45,7 @@ const profileFields = {
   className: 1,
   section: 1,
   subject: 1,
+  department: 1,
   profilePicture: 1,
   teacherId: 1,
   department: 1,
@@ -100,6 +101,9 @@ router.post("/", verifyToken, async (req, res) => {
 
     user.subject =
       String(req.body.subject ?? "").trim();
+
+    user.department =
+      String(req.body.department ?? user.department ?? "").trim();
 
     if (req.body.teacherId !== undefined) {
       user.teacherId = String(req.body.teacherId).trim();
@@ -181,6 +185,10 @@ router.put("/", verifyToken, async (req, res) => {
 
     if (req.body.subject !== undefined) {
       updates.subject = String(req.body.subject).trim();
+    }
+
+    if (req.body.department !== undefined) {
+      updates.department = String(req.body.department).trim();
     }
 
     if (req.body.teacherId !== undefined) {
