@@ -87,26 +87,28 @@ router.post("/", verifyToken, async (req, res) => {
       });
     }
 
-    user.name =
-      String(req.body.name ?? user.name).trim() || user.name;
+    const updates = {};
+    const name =
+      String(req.body.name ?? user.name).trim();
+    if (name) updates.name = name;
 
-    user.className =
+    updates.className =
       String(req.body.className ?? "").trim();
 
-    user.section =
+    updates.section =
       String(req.body.section ?? "").trim();
 
-    user.rollNumber =
+    updates.rollNumber =
       String(req.body.rollNumber ?? user.rollNumber ?? "").trim();
 
-    user.subject =
+    updates.subject =
       String(req.body.subject ?? "").trim();
 
-    user.department =
+    updates.department =
       String(req.body.department ?? user.department ?? "").trim();
 
     if (req.body.teacherId !== undefined) {
-      user.teacherId = String(req.body.teacherId).trim();
+      updates.teacherId = String(req.body.teacherId).trim();
     }
 
     if (req.body.profilePicture !== undefined) {
@@ -119,10 +121,13 @@ router.post("/", verifyToken, async (req, res) => {
         });
       }
 
-      user.profilePicture = picture;
+      updates.profilePicture = picture;
     }
 
-    await user.save();
+    await User.findOneAndUpdate(
+      { _id: user._id },
+      updates
+    );
 
     const updatedUser =
       await User.findById(user._id).select(profileFields);
