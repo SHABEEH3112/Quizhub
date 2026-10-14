@@ -1390,7 +1390,7 @@ function App() {
     ).padStart(2, "0")}`;
   };
 
-  const loadQuizHistory = async () => {
+  const loadQuizHistory = async (destination = "history") => {
     try {
       const token = localStorage.getItem("token");
 
@@ -1412,7 +1412,7 @@ function App() {
 
       setHistory(data.attempts || []);
       setMessage("");
-      setPage("history");
+      setPage(destination);
     } catch {
       setMessage("Server se history load nahi ho saki.");
     }
@@ -1778,15 +1778,17 @@ function App() {
     : [
         ["⌂", "Dashboard", "dashboard"],
         ["▦", "Available Quizzes", "quizList"],
-        ["▤", "My Results", "history"],
-        ["◉", "Profile", "editProfile"],
-      ];
+      ["▤", "My Quizzes", "myQuizzes"],
+      ["▥", "Results", "history"],
+      ["◉", "Profile", "editProfile"],
+    ];
   const workspacePageTitle = {
     teacherDashboard: "Teacher Dashboard",
     createQuiz: editingQuizId ? "Edit Quiz" : "Create Quiz",
     editQuiz: "Edit Quiz",
     manageQuizzes: "Manage Quizzes",
     teacherResults: "Student Results",
+    myQuizzes: "My Quizzes",
     history: "My Results",
     profile: "Student Profile",
     editProfile: "Profile Settings",
@@ -1798,6 +1800,8 @@ function App() {
 
     if (target === "history") {
       loadQuizHistory();
+    } else if (target === "myQuizzes") {
+      loadQuizHistory("myQuizzes");
     } else if (target === "quizList") {
       handleStartQuiz();
     } else if (target === "manageQuizzes") {
@@ -2249,7 +2253,7 @@ function App() {
                     {[
                       ["🏠", "Dashboard", "dashboard"],
                       ["▦", "Available Quizzes", "quizList"],
-                      ["📄", "My Quizzes", "history"],
+                      ["📄", "My Quizzes", "myQuizzes"],
                       ["📊", "Results", "history"],
                       ["👤", "Profile", "editProfile"],
                     ].map(([icon, label, target]) => (
@@ -2259,6 +2263,7 @@ function App() {
                         onClick={() => {
                           clearMessage();
                           if (target === "history") loadQuizHistory();
+                          else if (target === "myQuizzes") loadQuizHistory("myQuizzes");
                           else if (target === "editProfile") setPage("editProfile");
                           else setPage(target);
                         }}
@@ -2403,7 +2408,7 @@ function App() {
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "7px" }}>
                           <button type="button" onClick={handleStartQuiz} style={{ border: "1px solid #dbeafe", background: "#eff6ff", color: "#24508a", borderRadius: "8px", padding: "10px 5px", cursor: "pointer", fontSize: "9px", fontWeight: 700 }}>▶<br/>Take Quiz</button>
                           <button type="button" onClick={loadQuizHistory} style={{ border: "1px solid #d1fae5", background: "#ecfdf5", color: "#166534", borderRadius: "8px", padding: "10px 5px", cursor: "pointer", fontSize: "9px", fontWeight: 700 }}>▥<br/>View Results</button>
-                          <button type="button" onClick={() => setPage("history")} style={{ border: "1px solid #ede9fe", background: "#f5f3ff", color: "#5b21b6", borderRadius: "8px", padding: "10px 5px", cursor: "pointer", fontSize: "9px", fontWeight: 700 }}>☷<br/>My Quizzes</button>
+                          <button type="button" onClick={() => loadQuizHistory("myQuizzes")} style={{ border: "1px solid #ede9fe", background: "#f5f3ff", color: "#5b21b6", borderRadius: "8px", padding: "10px 5px", cursor: "pointer", fontSize: "9px", fontWeight: 700 }}>☷<br/>My Quizzes</button>
                           <button type="button" onClick={() => setPage("editProfile")} style={{ border: "1px solid #ffedd5", background: "#fff7ed", color: "#9a3412", borderRadius: "8px", padding: "10px 5px", cursor: "pointer", fontSize: "9px", fontWeight: 700 }}>♙<br/>Update Profile</button>
                         </div>
                       </div>
@@ -3536,6 +3541,65 @@ function App() {
           )}
 
 
+          {page === "myQuizzes" && (() => {
+            const attemptsByQuiz = new Map();
+
+            history.forEach((attempt) => {
+              const quizId = attempt.quiz?._id || attempt.quiz;
+              if (!quizId) return;
+
+              const id = String(quizId);
+              const quizAttempts = attemptsByQuiz.get(id) || [];
+              quizAttempts.push(attempt);
+              attemptsByQuiz.set(id, quizAttempts);
+            });
+
+            const attemptedQuizzes = [...attemptsByQuiz.values()];
+
+            return (
+              <>
+                <h1 style={styles.title}>📄 My Quizzes</h1>
+                <p style={styles.subtitle}>Quizzes you have attempted</p>
+                {message && <div style={styles.message}>{message}</div>}
+
+                {attemptedQuizzes.length === 0 ? (
+                  <div style={{ ...styles.info, textAlign: "center" }}>
+                    <h2>No Attempted Quizzes</h2>
+                    <p>Aapke attempt kiye huay quizzes yahan nazar aayenge.</p>
+                  </div>
+                ) : (
+                  attemptedQuizzes.map((quizAttempts) => {
+                    const latestAttempt = quizAttempts[0];
+                    const quiz = latestAttempt.quiz && typeof latestAttempt.quiz === "object"
+                      ? latestAttempt.quiz
+                      : null;
+
+                    return (
+                      <div key={String(quiz?._id || latestAttempt.quiz)} style={styles.quizBox}>
+                        <h3>{quiz?.title || "Quiz"}</h3>
+                        {quiz?.description && <p>{quiz.description}</p>}
+                        {quiz?.subject && <p><strong>Subject:</strong> {quiz.subject}</p>}
+                        <p><strong>Attempts:</strong> {quizAttempts.length}</p>
+                        <p>
+                          <strong>Last attempted:</strong>{" "}
+                          {latestAttempt.createdAt
+                            ? new Date(latestAttempt.createdAt).toLocaleString()
+                            : "N/A"}
+                        </p>
+                        <HoverButton
+                          style={styles.secondaryButton}
+                          onClick={() => setPage("history")}
+                        >
+                          View Results
+                        </HoverButton>
+                      </div>
+                    );
+                  })
+                )}
+              </>
+            );
+          })()}
+
           {page === "history" && (
             <>
               <h1 style={styles.title}>📚 Quiz History</h1>
@@ -3732,7 +3796,7 @@ function App() {
                     {[
                       ["🏠", "Dashboard", "dashboard"],
                       ["▦", "Available Quizzes", "quizList"],
-                      ["📄", "My Quizzes", "history"],
+                      ["📄", "My Quizzes", "myQuizzes"],
                       ["📊", "Results", "history"],
                       ["👤", "Profile", "editProfile"],
                     ].map(([icon, label, target]) => (
@@ -3743,6 +3807,8 @@ function App() {
                           clearMessage();
                           if (target === "history") {
                             loadQuizHistory();
+                          } else if (target === "myQuizzes") {
+                            loadQuizHistory("myQuizzes");
                           } else if (target === "editProfile") {
                             setPage("editProfile");
                           } else {
