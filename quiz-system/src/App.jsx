@@ -2391,7 +2391,7 @@ function App() {
                       <div style={{ marginTop: "12px", background: "var(--theme-panel)", border: "1px solid var(--theme-border)", borderRadius: "12px", padding: "13px" }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}><h2 style={{ margin: 0, fontSize: "15px", color: "var(--theme-text)" }}>▣ Recent Results</h2><button type="button" onClick={loadQuizHistory} style={{ border: "none", background: "transparent", color: "#36d7f5", fontWeight: 700, cursor: "pointer", fontSize: "9px" }}>View All</button></div>
                         {history.length === 0 ? <div style={{ color: "#64748b", fontSize: "10px", padding: "8px 0" }}>No results yet. Complete a quiz to see your performance here.</div> : (
-                          <div style={{ overflowX: "auto" }}><table style={{ width: "100%", borderCollapse: "collapse", fontSize: "9px" }}><thead><tr style={{ color: "#64748b", textAlign: "left" }}><th style={{ padding: "7px" }}>Quiz Title</th><th style={{ padding: "7px" }}>Subject</th><th style={{ padding: "7px" }}>Marks</th><th style={{ padding: "7px" }}>Percentage</th><th style={{ padding: "7px" }}>Date</th><th style={{ padding: "7px" }}>Status</th></tr></thead><tbody>{history.slice(0, 3).map((attempt) => { const total = Number(attempt.totalMarks ?? attempt.totalQuestions) || 0; const score = Number(attempt.score) || 0; const percentage = total ? Math.round((score / total) * 100) : 0; const passed = attempt.passed ?? (percentage >= 50); return <tr key={attempt._id} style={{ borderTop: "1px solid #edf2f7" }}><td style={{ padding: "7px", color: "#173b72", fontWeight: 700 }}>{attempt.quiz?.title || "Quiz"}</td><td style={{ padding: "7px", color: "#64748b" }}>{attempt.quiz?.subject || "—"}</td><td style={{ padding: "7px" }}>{score} / {total}</td><td style={{ padding: "7px", fontWeight: 700 }}>{percentage}%</td><td style={{ padding: "7px", color: "#64748b" }}>{attempt.createdAt ? new Date(attempt.createdAt).toLocaleDateString() : "—"}</td><td style={{ padding: "7px" }}><span style={{ padding: "3px 6px", borderRadius: "12px", background: passed ? "#ecfdf3" : "#fef2f2", color: passed ? "#15803d" : "#dc2626", fontWeight: 800 }}>{passed ? "✓ Passed" : "Failed"}</span></td></tr>; })}</tbody></table></div>
+                          <div style={{ overflowX: "auto" }}><table style={{ width: "100%", borderCollapse: "collapse", fontSize: "9px" }}><thead><tr style={{ color: "#64748b", textAlign: "left" }}><th style={{ padding: "7px" }}>Quiz Title</th><th style={{ padding: "7px" }}>Subject</th><th style={{ padding: "7px" }}>Obtained / Total Marks</th><th style={{ padding: "7px" }}>Percentage</th><th style={{ padding: "7px" }}>Date</th><th style={{ padding: "7px" }}>Status</th></tr></thead><tbody>{history.slice(0, 3).map((attempt) => { const total = Number(attempt.totalMarks ?? attempt.totalQuestions) || 0; const score = Number(attempt.score) || 0; const percentage = total ? Math.round((score / total) * 100) : 0; const passed = attempt.passed ?? (percentage >= 50); return <tr key={attempt._id} style={{ borderTop: "1px solid #edf2f7" }}><td style={{ padding: "7px", color: "#173b72", fontWeight: 700 }}>{attempt.quiz?.title || "Quiz"}</td><td style={{ padding: "7px", color: "#64748b" }}>{attempt.quiz?.subject || "—"}</td><td style={{ padding: "7px" }}>{score} / {total}</td><td style={{ padding: "7px", fontWeight: 700 }}>{percentage}%</td><td style={{ padding: "7px", color: "#64748b" }}>{attempt.createdAt ? new Date(attempt.createdAt).toLocaleDateString() : "—"}</td><td style={{ padding: "7px" }}><span style={{ padding: "3px 6px", borderRadius: "12px", background: passed ? "#ecfdf3" : "#fef2f2", color: passed ? "#15803d" : "#dc2626", fontWeight: 800 }}>{passed ? "✓ Passed" : "Failed"}</span></td></tr>; })}</tbody></table></div>
                         )}
                       </div>
                     </section>
@@ -2524,7 +2524,7 @@ function App() {
                       <div>Student</div>
                       <div>Email</div>
                       <div>Quiz</div>
-                      <div>Score</div>
+                      <div>Obtained / Total Marks</div>
                       <div>Percent</div>
                       <div>Status</div>
                       <div>Date</div>
@@ -3622,7 +3622,7 @@ function App() {
                     <div key={attempt._id} style={styles.quizBox}>
                       <h3>{attempt.quiz?.title || "Quiz"}</h3>
                       {attempt.quiz?.description && <p>{attempt.quiz.description}</p>}
-                      <p><strong>Score:</strong> {attempt.score} / {historyTotal}</p>
+                      <p><strong>Obtained Marks / Total Marks:</strong> {attempt.score} / {historyTotal}</p>
                       <p><strong>Percentage:</strong> {percentage}%</p>
                       <p>
                         <strong>Date:</strong>{" "}
@@ -4104,7 +4104,7 @@ function App() {
               <p style={styles.subtitle}>Your result is ready</p>
 
               <div style={{ ...styles.info, textAlign: "center", padding: "30px" }}>
-                <p style={{ color: "#64748b", marginBottom: "5px" }}>Your Score</p>
+                <p style={{ color: "#64748b", marginBottom: "5px" }}>Obtained Marks / Total Marks</p>
                 <div style={{ fontSize: "48px", fontWeight: 800, color: "#2563eb" }}>
                   {quizResult.score} / {quizResult.totalMarks ?? quizResult.totalQuestions}
                 </div>
