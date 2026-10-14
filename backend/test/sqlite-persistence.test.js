@@ -12,10 +12,20 @@ const User = require("../models/User");
 const PendingRegistration = require("../models/PendingRegistration");
 const Quiz = require("../models/Quiz");
 const Attempt = require("../models/Attempt");
+const { createMongoSchema } = require("../models/sqliteModel");
 
 after(() => {
   store.closeDatabase();
   fs.rmSync(temporaryDirectory, { recursive: true, force: true });
+});
+
+test("Mongo schemas define populate references for attempt history and teacher results", () => {
+  const schema = createMongoSchema(Attempt);
+
+  assert.equal(schema.path("quiz").options.ref, "Quiz");
+  assert.equal(schema.path("quiz").instance, "ObjectId");
+  assert.equal(schema.path("student").options.ref, "User");
+  assert.equal(schema.path("student").instance, "ObjectId");
 });
 
 test("SQLite data survives reopening and supports app query patterns", async () => {

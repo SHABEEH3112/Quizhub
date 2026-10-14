@@ -16,21 +16,40 @@ const normalizeMongoCollectionName = (modelName) => {
   return name.endsWith("s") ? `${name}es` : `${name}s`;
 };
 
-const getMongoModel = (modelName) => {
+const createMongoSchema = (ModelClass) => {
+  const referencePaths = Object.fromEntries(
+    Object.entries(ModelClass.populateRefs || {}).map(([path, getRelatedModel]) => {
+      const RelatedModel = getRelatedModel();
+      return [
+        path,
+        {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: RelatedModel.modelName,
+        },
+      ];
+    })
+  );
+
+  return new mongoose.Schema(referencePaths, {
+    strict: false,
+    timestamps: true,
+  });
+};
+
+const getMongoModel = (ModelClass) => {
+  const modelName = ModelClass.modelName;
   const collectionName = normalizeMongoCollectionName(modelName);
 
   if (mongoose.models[modelName]) {
     return mongoose.models[modelName];
   }
 
-  const schema = new mongoose.Schema(
-    {},
-    {
-      strict: false,
-      timestamps: true,
-      collection: collectionName,
-    }
-  );
+  for (const getRelatedModel of Object.values(ModelClass.populateRefs || {})) {
+    getMongoModel(getRelatedModel());
+  }
+
+  const schema = createMongoSchema(ModelClass);
+  schema.set("collection", collectionName);
 
   return mongoose.model(modelName, schema);
 };
@@ -132,7 +151,7 @@ class MongoQuery {
   }
 
   async exec() {
-    const model = getMongoModel(this.Model.modelName);
+    const model = getMongoModel(this.Model);
     let query = this.single
       ? model.findOne(this.filter)
       : model.find(this.filter);
@@ -236,7 +255,7 @@ class SQLiteModel {
 
   async save() {
     if (useMongo()) {
-      const model = getMongoModel(this.constructor.modelName);
+      const model = getMongoModel(this.constructor);
       const payload = { ...this };
       const document = await model.findOneAndUpdate(
         { _id: this._id },
@@ -254,7 +273,7 @@ class SQLiteModel {
 
   async deleteOne() {
     if (useMongo()) {
-      const model = getMongoModel(this.constructor.modelName);
+      const model = getMongoModel(this.constructor);
       const document = await model.findOneAndDelete({ _id: this._id });
       return document;
     }
@@ -282,7 +301,7 @@ class SQLiteModel {
 
   static async findOneAndUpdate(filter, update, options = {}) {
     if (useMongo()) {
-      const model = getMongoModel(this.modelName);
+      const model = getMongoModel(this);
       const result = await model.findOneAndUpdate(
         filter || {},
         update,
@@ -306,7 +325,7 @@ class SQLiteModel {
 
   static async findOneAndDelete(filter) {
     if (useMongo()) {
-      const model = getMongoModel(this.modelName);
+      const model = getMongoModel(this);
       const document = await model.findOneAndDelete(filter || {});
       return document ? document.toObject() : null;
     }
@@ -317,7 +336,7 @@ class SQLiteModel {
 
   static async countDocuments(filter = {}) {
     if (useMongo()) {
-      const model = getMongoModel(this.modelName);
+      const model = getMongoModel(this);
       return model.countDocuments(filter || {});
     }
 
@@ -327,4 +346,4 @@ class SQLiteModel {
   }
 }
 
-module.exports = { SQLiteModel, createId };
+module.exports = { SQLiteModel, createId, createMongoSchema };
