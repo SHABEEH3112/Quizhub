@@ -253,6 +253,24 @@ class SQLiteModel {
     this.updatedAt = data.updatedAt ? new Date(data.updatedAt) : new Date();
   }
 
+  set(path, value) {
+    if (path && typeof path === "object" && !Array.isArray(path)) {
+      Object.assign(this, path);
+      return this;
+    }
+
+    const keys = String(path).split(".");
+    let target = this;
+    for (let index = 0; index < keys.length - 1; index += 1) {
+      if (!target[keys[index]] || typeof target[keys[index]] !== "object") {
+        target[keys[index]] = {};
+      }
+      target = target[keys[index]];
+    }
+    target[keys[keys.length - 1]] = value;
+    return this;
+  }
+
   async save() {
     if (useMongo()) {
       const model = getMongoModel(this.constructor);

@@ -641,27 +641,23 @@ router.put(
           });
         }
 
-        quiz.title = title.trim();
+        quiz.set("title", (title.trim()), { strict: false });
       }
 
       if (subject !== undefined) {
-        quiz.subject =
-          subject?.trim() || "";
+        quiz.set("subject", (subject?.trim() || ""), { strict: false });
       }
 
       if (department !== undefined) {
-        quiz.department =
-          department?.trim() || "";
+        quiz.set("department", (department?.trim() || ""), { strict: false });
       }
 
       if (classSemester !== undefined) {
-        quiz.classSemester =
-          classSemester?.trim() || "";
+        quiz.set("classSemester", (classSemester?.trim() || ""), { strict: false });
       }
 
       if (description !== undefined) {
-        quiz.description =
-          description?.trim() || "";
+        quiz.set("description", (description?.trim() || ""), { strict: false });
       }
 
       // ---------------------------------------------
@@ -682,7 +678,7 @@ router.put(
           });
         }
 
-        quiz.timeLimit = value;
+        quiz.set("timeLimit", (value), { strict: false });
       }
 
       // ---------------------------------------------
@@ -701,13 +697,12 @@ router.put(
           });
         }
 
-        quiz.questions =
-          prepareQuestions(
+        quiz.set("questions", (prepareQuestions(
             questions
-          );
+          )), { strict: false });
 
         if (totalMarks === undefined || Number(totalMarks) === 0) {
-          quiz.totalMarks = calculateTotalMarks(quiz.questions);
+          quiz.set("totalMarks", (calculateTotalMarks(quiz.questions)), { strict: false });
         }
       }
 
@@ -718,7 +713,7 @@ router.put(
             message: "Total marks must be a valid non-negative number",
           });
         }
-        quiz.totalMarks = value;
+        quiz.set("totalMarks", (value), { strict: false });
       }
 
       // ---------------------------------------------
@@ -741,7 +736,7 @@ router.put(
           });
         }
 
-        quiz.passingMarks = value;
+        quiz.set("passingMarks", (value), { strict: false });
       }
 
       // Make sure passing marks are valid
@@ -775,8 +770,7 @@ router.put(
           });
         }
 
-        quiz.numberOfAttempts =
-          value;
+        quiz.set("numberOfAttempts", (value), { strict: false });
       }
 
       // ---------------------------------------------
@@ -787,20 +781,18 @@ router.put(
         randomizeQuestions !==
         undefined
       ) {
-        quiz.randomizeQuestions =
-          Boolean(
+        quiz.set("randomizeQuestions", (Boolean(
             randomizeQuestions
-          );
+          )), { strict: false });
       }
 
       if (
         randomizeOptions !==
         undefined
       ) {
-        quiz.randomizeOptions =
-          Boolean(
+        quiz.set("randomizeOptions", (Boolean(
             randomizeOptions
-          );
+          )), { strict: false });
       }
 
       // ---------------------------------------------
@@ -811,10 +803,9 @@ router.put(
         showResultImmediately !==
         undefined
       ) {
-        quiz.showResultImmediately =
-          Boolean(
+        quiz.set("showResultImmediately", (Boolean(
             showResultImmediately
-          );
+          )), { strict: false });
       }
 
       // ---------------------------------------------
@@ -844,11 +835,9 @@ router.put(
         });
       }
 
-      quiz.startDateTime =
-        schedule.start || null;
+      quiz.set("startDateTime", (schedule.start || null), { strict: false });
 
-      quiz.endDateTime =
-        schedule.end || null;
+      quiz.set("endDateTime", (schedule.end || null), { strict: false });
 
       // ---------------------------------------------
       // ASSIGNMENT
@@ -858,31 +847,27 @@ router.put(
         assignedDepartment !==
         undefined
       ) {
-        quiz.assignedDepartment =
-          assignedDepartment?.trim() ||
-          "";
+        quiz.set("assignedDepartment", (assignedDepartment?.trim() ||
+          ""), { strict: false });
       }
 
       if (
         assignedClassSemester !==
         undefined
       ) {
-        quiz.assignedClassSemester =
-          assignedClassSemester?.trim() ||
-          "";
+        quiz.set("assignedClassSemester", (assignedClassSemester?.trim() ||
+          ""), { strict: false });
       }
 
       if (assignedSection !== undefined) {
-        quiz.assignedSection =
-          assignedSection?.trim() || "";
+        quiz.set("assignedSection", (assignedSection?.trim() || ""), { strict: false });
       }
 
       if (
         studentGroup !== undefined
       ) {
-        quiz.studentGroup =
-          studentGroup?.trim() ||
-          "All Students";
+        quiz.set("studentGroup", (studentGroup?.trim() ||
+          "All Students"), { strict: false });
       }
 
       // ---------------------------------------------
@@ -902,22 +887,38 @@ router.put(
           });
         }
 
-        quiz.status = status;
+        quiz.set("status", (status), { strict: false });
       }
 
       // ---------------------------------------------
       // SAVE
       // ---------------------------------------------
+      const persistedQuizData =
+        typeof quiz.toObject === "function"
+          ? quiz.toObject()
+          : { ...quiz };
+      delete persistedQuizData._id;
+      delete persistedQuizData.__v;
+      delete persistedQuizData.createdAt;
+      persistedQuizData.updatedAt = new Date();
 
-      await quiz.save();
+      const persistedQuiz =
+        await Quiz.findOneAndUpdate(
+          {
+            _id: quiz._id,
+            createdBy: req.user.userId,
+          },
+          persistedQuizData,
+          { new: true }
+        );
 
       res.json({
         message:
-          quiz.status === "draft"
+          (persistedQuiz?.status || quiz.status) === "draft"
             ? "Quiz draft updated successfully"
             : "Quiz updated successfully",
 
-        quiz,
+        quiz: persistedQuiz || quiz,
       });
     } catch (error) {
       console.log(
