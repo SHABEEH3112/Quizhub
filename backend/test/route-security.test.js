@@ -451,7 +451,7 @@ test("attempt submission rejects repeated answers for the same question", async 
   assert.equal(await Attempt.countDocuments({ student: student._id, quiz: quiz._id }), 0);
 });
 
-test("attempt submission still scores and persists a valid answer set", async () => {
+test("attempt submission awards each correct question's configured marks", async () => {
   const teacher = await new User({
     name: "Scoring Teacher",
     email: "scoring-teacher@example.test",
@@ -469,19 +469,25 @@ test("attempt submission still scores and persists a valid answer set", async ()
     createdBy: teacher._id,
     status: "published",
     timeLimit: 30,
-    passingMarks: 3,
+    passingMarks: 7,
     questions: [
       {
-        question: "One plus one?",
-        options: ["2", "3", "4", "5"],
-        correctAnswer: "2",
-        marks: 2,
+        question: "Five-mark question?",
+        options: ["Correct 1", "Wrong 1", "Wrong 2", "Wrong 3"],
+        correctAnswer: "Correct 1",
+        marks: 5,
       },
       {
-        question: "Two plus two?",
-        options: ["2", "3", "4", "5"],
-        correctAnswer: "4",
+        question: "Three-mark question?",
+        options: ["Correct 2", "Wrong 1", "Wrong 2", "Wrong 3"],
+        correctAnswer: "Correct 2",
         marks: 3,
+      },
+      {
+        question: "Two-mark question?",
+        options: ["Correct 3", "Wrong 1", "Wrong 2", "Wrong 3"],
+        correctAnswer: "Correct 3",
+        marks: 2,
       },
     ],
   }).save();
@@ -498,17 +504,18 @@ test("attempt submission still scores and persists a valid answer set", async ()
     token: studentToken,
     quizId: quiz._id,
     quizSessionToken,
-    answers: quiz.questions.map((question) => ({
-      questionId: question._id,
-      answer: question.correctAnswer,
-    })),
+    answers: [
+      { questionId: quiz.questions[0]._id, answer: "Correct 1" },
+      { questionId: quiz.questions[1]._id, answer: "Wrong 1" },
+      { questionId: quiz.questions[2]._id, answer: "Correct 3" },
+    ],
   });
   const result = await response.json();
 
   assert.equal(response.status, 201);
-  assert.equal(result.score, 5);
-  assert.equal(result.totalMarks, 5);
-  assert.equal(result.percentage, 100);
+  assert.equal(result.score, 7);
+  assert.equal(result.totalMarks, 10);
+  assert.equal(result.percentage, 70);
   assert.equal(result.passed, true);
   assert.equal(await Attempt.countDocuments({ student: student._id, quiz: quiz._id }), 1);
 
@@ -518,7 +525,8 @@ test("attempt submission still scores and persists a valid answer set", async ()
   const history = await historyResponse.json();
   assert.equal(historyResponse.status, 200);
   assert.equal(history.attempts[0].quiz.subject, "");
-  assert.equal(history.attempts[0].totalMarks, 5);
+  assert.equal(history.attempts[0].score, 7);
+  assert.equal(history.attempts[0].totalMarks, 10);
 
   const teacherToken = jwt.sign(
     { userId: teacher._id, role: "teacher" },
@@ -529,7 +537,8 @@ test("attempt submission still scores and persists a valid answer set", async ()
   );
   const teacherResults = await teacherResultsResponse.json();
   assert.equal(teacherResultsResponse.status, 200);
-  assert.equal(teacherResults.attempts[0].totalMarks, 5);
+  assert.equal(teacherResults.attempts[0].score, 7);
+  assert.equal(teacherResults.attempts[0].totalMarks, 10);
   assert.equal(teacherResults.attempts[0].student.name, "Scoring Student");
 });
 

@@ -4104,7 +4104,7 @@ function App() {
               <p style={styles.subtitle}>Your result is ready</p>
 
               <div style={{ ...styles.info, textAlign: "center", padding: "30px" }}>
-                <p style={{ color: "#64748b", marginBottom: "5px" }}>Obtained Marks / Total Marks</p>
+                <p style={{ color: "#64748b", marginBottom: "5px" }}>Obtained Marks:</p>
                 <div style={{ fontSize: "48px", fontWeight: 800, color: "#2563eb" }}>
                   {quizResult.score} / {quizResult.totalMarks ?? quizResult.totalQuestions}
                 </div>
