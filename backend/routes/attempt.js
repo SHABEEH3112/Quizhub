@@ -276,6 +276,45 @@ function getAnswerValue(answerItem) {
   return answerItem;
 }
 
+const toPlainObject = (document) =>
+  typeof document?.toObject === "function"
+    ? document.toObject()
+    : { ...document };
+
+const getReferenceId = (reference) =>
+  String(reference?._id || reference || "");
+
+async function attachAttemptDetails(attempts, includeStudent = false) {
+  const quizIds = [...new Set(attempts.map((attempt) => getReferenceId(attempt.quiz)))];
+  const quizzes = await Quiz.find({ _id: { $in: quizIds } }).select(
+    "title description subject timeLimit numberOfAttempts totalMarks passingMarks"
+  );
+  const quizzesById = new Map(
+    quizzes.map((quiz) => [getReferenceId(quiz._id), toPlainObject(quiz)])
+  );
+
+  let studentsById = new Map();
+  if (includeStudent) {
+    const studentIds = [...new Set(
+      attempts.map((attempt) => getReferenceId(attempt.student))
+    )];
+    const students = await User.find({ _id: { $in: studentIds } }).select(
+      "name email rollNumber className section department"
+    );
+    studentsById = new Map(
+      students.map((student) => [getReferenceId(student._id), toPlainObject(student)])
+    );
+  }
+
+  return attempts.map((attempt) => ({
+    ...toPlainObject(attempt),
+    quiz: quizzesById.get(getReferenceId(attempt.quiz)) || null,
+    ...(includeStudent
+      ? { student: studentsById.get(getReferenceId(attempt.student)) || null }
+      : {}),
+  }));
+}
+
 // =====================================================
 // START QUIZ
 // =====================================================
@@ -1099,20 +1138,16 @@ router.get(
         await Attempt.find({
           student:
             decoded.userId,
-        })
-          .populate(
-            "quiz",
-              "title description subject timeLimit numberOfAttempts totalMarks passingMarks"
-          )
-          .sort({
+        }).sort({
             createdAt: -1,
           });
+      const detailedAttempts = await attachAttemptDetails(attempts);
 
       res.json({
         message:
           "Quiz history fetched successfully",
 
-        attempts,
+        attempts: detailedAttempts,
       });
     } catch (error) {
       console.log(
@@ -1167,25 +1202,17 @@ router.get(
           quiz: {
             $in: quizIds,
           },
-        })
-          .populate(
-            "student",
-            "name email rollNumber className section department"
-          )
-          .populate(
-            "quiz",
-            "title description timeLimit totalMarks passingMarks numberOfAttempts"
-          )
-          .sort({
+        }).sort({
             createdAt: -1,
           });
+      const detailedAttempts = await attachAttemptDetails(attempts, true);
 
       // -------------------------------------------------
       // FORMAT RESULTS
       // -------------------------------------------------
 
       const results =
-        attempts.map(
+        detailedAttempts.map(
           (attempt) => ({
             _id:
               attempt._id,
