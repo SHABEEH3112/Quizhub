@@ -39,12 +39,9 @@ const apiLimiter = rateLimit({
 });
 
 app.use(helmet());
-app.use(
-  cors({
-    origin: "*",
-    credentials: true,
-  })
-);
+
+// CORS: origin true allows Vercel frontend domains; credentials enables auth headers
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json({ limit: "10mb" }));
 app.use(apiLimiter);
 app.use(async (req, res, next) => {
