@@ -1104,7 +1104,7 @@ try {
             correctAnswer: String(item.correctAnswer || "").trim(),
             marks: Math.max(1, Number(item.marks) || 1),
           })),
-        },
+        }),
       });
 
       const data = await response.json();
