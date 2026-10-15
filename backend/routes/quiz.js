@@ -14,7 +14,7 @@ const verifyTeacher = async (req, res, next) => {
   let decoded;
 
   try {
-    const authHeader = req.headers.authorization;
+    const authHeader = req.headers.Authorization;
 
     let token = null;
 
@@ -60,7 +60,7 @@ const verifyTeacher = async (req, res, next) => {
     });
   }
 
-  if (user.role !== "teacher") {
+  if (user.role.toLowerCase() !== "teacher") {
     return res.status(403).json({
       message: "Only teachers can perform this action",
     });

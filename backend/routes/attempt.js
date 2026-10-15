@@ -1134,10 +1134,11 @@ router.get(
       const decoded = await verifyStudent(req, res);
       if (!decoded) return;
 
+      const studentId = String(decoded.userId);
+
       const attempts =
         await Attempt.find({
-          student:
-            decoded.userId,
+          student: studentId,
         }).sort({
             createdAt: -1,
           });
