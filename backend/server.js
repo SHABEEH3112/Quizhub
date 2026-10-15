@@ -41,7 +41,7 @@ const apiLimiter = rateLimit({
 app.use(helmet());
 app.use(
   cors({
-    origin: clientOrigin,
+    origin: "*",
     credentials: true,
   })
 );

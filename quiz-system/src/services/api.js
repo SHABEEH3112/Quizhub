@@ -3,4 +3,4 @@ export const getAuthHeaders = (token) => ({
   Authorization: `Bearer ${token}`,
 });
 
-export const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
+export const API = import.meta.env.VITE_API_URL || "https://quizhub-2.vercel.app";
