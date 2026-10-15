@@ -216,7 +216,7 @@ function validateSchedule(startDateTime, endDateTime) {
 router.get("/", async (req, res) => {
   try {
     let student = null;
-    const authHeader = req.headers.authorization;
+    const authHeader = req.headers.Authorization;
     const token = authHeader?.startsWith("Bearer ")
       ? authHeader.substring(7)
       : req.body?.token || req.query?.token;
