@@ -5,13 +5,17 @@ const User = require("../models/User");
 const router = express.Router();
 
 const getToken = (req) => {
-  const authHeader = req.headers.authorization;
+  let token = null;
 
-  if (authHeader && authHeader.startsWith("Bearer ")) {
-    return authHeader.substring(7);
+  if (req.headers.authorization && req.headers.authorization.startsWith("Bearer ")) {
+    token = req.headers.authorization.substring(7);
   }
 
-  return req.body?.token || req.query?.token || null;
+  if (!token) {
+    token = req.body?.token || req.query?.token;
+  }
+
+  return token || null;
 };
 
 const verifyToken = (req, res, next) => {
@@ -25,6 +29,9 @@ const verifyToken = (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    req.user = decoded;
+    next();
 
     req.user = decoded;
     next();

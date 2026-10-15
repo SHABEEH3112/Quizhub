@@ -290,11 +290,13 @@ function App() {
     e.preventDefault();
     setMessage("Login ho raha hai...");
 
-    try {
-      const response = await fetch(`${API}/api/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+try {
+      const response = await fetch(`${API}/api/profile`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       const data = await response.json();
@@ -409,9 +411,11 @@ function App() {
     try {
       const response = await fetch(`${API}/api/profile`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
-          token,
           name: displayName.trim() || user?.name || "",
           className,
           section,
@@ -686,9 +690,11 @@ function App() {
     try {
       const response = await fetch(`${API}/api/quizzes`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
-          token,
           title: newQuizTitle.trim(),
           subject: newQuizSubject.trim(),
           department: newQuizDepartment.trim(),
@@ -756,7 +762,13 @@ function App() {
 
     try {
       const response = await fetch(
-        `${API}/api/quizzes/teacher/my-quizzes?token=${encodeURIComponent(token)}`
+        `${API}/api/quizzes/teacher/my-quizzes`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
       );
       const data = await response.json();
 
@@ -788,7 +800,13 @@ function App() {
 
     try {
       const response = await fetch(
-        `${API}/api/attempts/teacher/results?token=${encodeURIComponent(token)}`
+        `${API}/api/attempts/teacher/results`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
       );
 
       const data = await response.json();
@@ -821,8 +839,10 @@ function App() {
     try {
       const response = await fetch(`${API}/api/quizzes/${quizId}`, {
         method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token }),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       const data = await response.json();
@@ -1084,7 +1104,7 @@ function App() {
             correctAnswer: String(item.correctAnswer || "").trim(),
             marks: Math.max(1, Number(item.marks) || 1),
           })),
-        }),
+        },
       });
 
       const data = await response.json();
@@ -1160,14 +1180,14 @@ function App() {
 
     setMessage("Quiz start ho raha hai...");
 
-    try {
+try {
       const response = await fetch(`${API}/api/attempts/start`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          token,
           quizId: quiz._id,
         }),
       });
@@ -1269,9 +1289,11 @@ function App() {
     try {
       const response = await fetch(`${API}/api/attempts`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
-          token,
           quizId: selectedQuiz._id,
           answers,
           quizSessionToken,
@@ -1352,8 +1374,16 @@ function App() {
     const refreshDashboardData = async () => {
       try {
         const [quizResponse, historyResponse] = await Promise.all([
-          fetch(`${API}/api/quizzes?token=${encodeURIComponent(token)}`),
-          fetch(`${API}/api/attempts?token=${encodeURIComponent(token)}`),
+          fetch(`${API}/api/quizzes`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }),
+          fetch(`${API}/api/attempts`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }),
         ]);
 
         const quizData = await quizResponse.json();

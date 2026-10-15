@@ -1,7 +1,6 @@
-export const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
-
-export const getAuthHeaders = (token, extraHeaders = {}) => ({
+export const getAuthHeaders = (token) => ({
   "Content-Type": "application/json",
-  ...extraHeaders,
-  ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  Authorization: `Bearer ${token}`,
 });
+
+export const API = import.meta.env.VITE_API_URL || "http://localhost:5000";

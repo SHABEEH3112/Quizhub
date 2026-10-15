@@ -14,16 +14,17 @@ const router = express.Router();
 // =====================================================
 
 function getToken(req) {
-  const authHeader = req.headers.authorization;
+  let token = null;
 
-  if (
-    authHeader &&
-    authHeader.startsWith("Bearer ")
-  ) {
-    return authHeader.substring(7);
+  if (req.headers.authorization && req.headers.authorization.startsWith("Bearer ")) {
+    token = req.headers.authorization.substring(7);
   }
 
-  return req.body?.token || req.query?.token || null;
+  if (!token) {
+    token = req.body?.token || req.query?.token;
+  }
+
+  return token || null;
 }
 
 // =====================================================

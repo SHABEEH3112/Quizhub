@@ -2,8 +2,6 @@ const express = require("express");
 const jwt = require("jsonwebtoken");
 const Quiz = require("../models/Quiz");
 const User = require("../models/User");
-const { isQuizAssignedToStudent } = require("../utils/quizAssignment");
-
 const router = express.Router();
 
 // =====================================================
@@ -14,13 +12,13 @@ const verifyTeacher = async (req, res, next) => {
   let decoded;
 
   try {
-    const authHeader = req.headers.authorization;
-
     let token = null;
 
-    if (authHeader && authHeader.startsWith("Bearer ")) {
-      token = authHeader.substring(7);
-    } else {
+    if (req.headers.authorization && req.headers.authorization.startsWith("Bearer ")) {
+      token = req.headers.authorization.substring(7);
+    }
+
+    if (!token) {
       token = req.body?.token || req.query?.token;
     }
 
@@ -215,47 +213,11 @@ function validateSchedule(startDateTime, endDateTime) {
 
 router.get("/", async (req, res) => {
   try {
-    let student = null;
-    const authHeader = req.headers.authorization;
-    const token = authHeader?.startsWith("Bearer ")
-      ? authHeader.substring(7)
-      : req.body?.token || req.query?.token;
-
-    if (token) {
-      let decoded;
-      try {
-        decoded = jwt.verify(token, process.env.JWT_SECRET);
-      } catch {
-        return res.status(401).json({
-          message: "Invalid or expired token",
-        });
-      }
-
-      student = await User.findById(decoded.userId);
-      if (!student) {
-        return res.status(401).json({
-          message: "User not found",
-        });
-      }
-
-      if (student.role !== "student") {
-        return res.status(403).json({
-          message: "Only students can view assigned quizzes",
-        });
-      }
-    }
-
     let quizzes = await Quiz.find({
       status: "published",
     })
       .select("-questions.correctAnswer")
       .sort({ createdAt: -1 });
-
-    if (student) {
-      quizzes = quizzes.filter((quiz) =>
-        isQuizAssignedToStudent(quiz, student)
-      );
-    }
 
     res.json(quizzes);
   } catch (error) {
